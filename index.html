@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <title>Minecraft Survival - Avtomatik İnventar Sistemi</title>
+    <title>Minecraft Survival - Gecə/Gündüz və Qolem Müharibəsi Modu</title>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; user-select: none; }
         #canvas-container { width: 100vw; height: 100vh; display: block; }
@@ -17,21 +17,22 @@
         #heart-container { position: absolute; top: 180px; left: 20px; display: flex; gap: 4px; pointer-events: none; z-index: 10; }
         .heart { font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
 
-        .ui-screen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 420px; background: rgba(30, 30, 30, 0.95); border: 3px solid #555; border-radius: 10px; color: white; padding: 20px; box-shadow: 0 0 25px rgba(0,0,0,0.8); z-index: 20; }
+        .ui-screen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; background: rgba(30, 30, 30, 0.95); border: 3px solid #555; border-radius: 10px; color: white; padding: 20px; box-shadow: 0 0 25px rgba(0,0,0,0.8); z-index: 20; }
         .inv-title { text-align: center; margin-top: 0; color: #f1c40f; font-size: 18px; border-bottom: 2px solid #555; padding-bottom: 10px; }
         .inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
         .inv-item { background: #222; border: 2px solid #444; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         .inv-item:hover { border-color: #f1c40f; background: #2d2d2d; }
         .inv-item .icon { font-size: 26px; display: block; margin-bottom: 4px; }
-        .inv-item .count { font-size: 12px; color: #aaa; margin-top: 4px; }
         
         #hotbar { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(20, 20, 20, 0.85); padding: 6px; border-radius: 8px; border: 2px solid #555; box-shadow: 0 8px 20px rgba(0,0,0,0.7); pointer-events: none; }
-        .slot { width: 52px; height: 52px; margin: 0 3px; border: 3px solid #3a3a3a; background: #222; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-size: 9px; font-weight: bold; position: relative; }
+        .slot { width: 54px; height: 54px; margin: 0 3px; border: 3px solid #3a3a3a; background: #222; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-size: 9px; font-weight: bold; position: relative; }
         .slot.active { border-color: #f1c40f; background: #333; box-shadow: 0 0 12px #f1c40f; }
         .slot .key-num { position: absolute; top: 2px; left: 4px; color: #888; font-size: 8px; }
         .slot .icon { font-size: 18px; }
+        .slot .count { position: absolute; bottom: 2px; right: 4px; color: #f1c40f; font-size: 10px; }
 
-        #armor-status { position: absolute; bottom: 85px; left: 20px; background: rgba(0,0,0,0.6); color: white; padding: 10px; border-radius: 6px; font-size: 13px; pointer-events: none; }
+        #resources-display { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 12px; border-radius: 6px; font-size: 14px; line-height: 1.6; pointer-events: none; border-left: 4px solid #f1c40f; }
+        #time-display { position: absolute; top: 120px; right: 20px; background: rgba(0,0,0,0.8); color: #00eeee; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; pointer-events: none; }
         #instructions { position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; pointer-events: none; text-align: center; }
         #ammo-display { position: absolute; bottom: 155px; left: 20px; background: rgba(211, 84, 0, 0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; font-weight: bold; display: none; }
     </style>
@@ -40,28 +41,45 @@
 <body>
 
     <div id="crosshair"></div>
-    <div id="chat"><div>[Sistem] Sandıqdan götürülən hər şey birbaşa aşağıdakı inventara düşür!</div></div>
+    <div id="chat"><div>[Sistem] Hər 5 dəqiqədən bir gecə olacaq, zombilər gələcək və Qolemlər onları ovlayacaq!</div></div>
     
     <div id="heart-container"></div>
-    <div id="armor-status">🛡️ Zireh: Yoxdur</div>
     <div id="ammo-display">🔫 Güllə: 0</div>
+    <div id="time-display">☀️ GÜNDÜZ (Zaman: 00:00)</div>
 
-    <div id="inventory-screen" class="ui-screen">
-        <h3 class="inv-title">🎒 Sənin Çantan</h3>
-        <div class="inv-grid" id="inv-grid-element"></div>
-        <p style="text-align:center; margin-top:15px;"><button onclick="toggleInventory()" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">Bağla (E)</button></p>
+    <!-- 📊 Resurs Paneli (Əşyaların Sayı Burda Tam Göstərilir) -->
+    <div id="resources-display">
+        🪵 Taxta: <span id="res-wood" style="font-weight:bold; color:#e67e22;">10</span><br>
+        🧱 Daş: <span id="res-stone" style="font-weight:bold; color:#bdc3c7;">10</span><br>
+        🧠 Beyin: <span id="res-brain" style="font-weight:bold; color:#e74c3c;">0</span><br>
+        🪙 Dəmir: <span id="res-iron" style="font-weight:bold; color:#3498db;">0</span><br>
+        🏹 Yay: <span id="res-bow" style="font-weight:bold; color:#f1c40f;">0</span><br>
+        🪶 Ox: <span id="res-arrow" style="font-weight:bold; color:#2ecc71;">0</span>
     </div>
 
+    <!-- 🧰 Sandıq Menyusu -->
     <div id="chest-screen" class="ui-screen">
-        <h3 class="inv-title">🧰 Sandığın İçi (Kliklə və Birbaşa İnventara Düşsün)</h3>
+        <h3 class="inv-title">🧰 Sandıq</h3>
         <div class="inv-grid" id="chest-grid-element"></div>
         <p style="text-align:center; margin-top:15px;"><button onclick="closeChestInventory()" style="background:#27ae60; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">Çıx (E)</button></p>
     </div>
+
+    <!-- ⚒️ Crafting Menyusu -->
+    <div id="crafting-screen" class="ui-screen">
+        <h3 class="inv-title">⚒️ Crafting Table (Düzəltmə Masası)</h3>
+        <div class="inv-grid">
+            <div class="inv-item" onclick="craftItem('crafting_table')"><span class="icon">📦</span><b>Craft Masası</b><div style="font-size:10px;color:#aaa;">Tələb: 4 Taxta</div></div>
+            <div class="inv-item" onclick="craftItem('pistol')"><span class="icon">🔫</span><b>Tapança</b><div style="font-size:10px;color:#aaa;">Tələb: 3 Dəmir + 1 Beyin</div></div>
+            <div class="inv-item" onclick="craftItem('armor')"><span class="icon">👕</span><b>Almaz Zireh</b><div style="font-size:10px;color:#aaa;">Tələb: 1 Yay + 2 Dəmir</div></div>
+        </div>
+        <p style="text-align:center; margin-top:15px;"><button onclick="toggleCrafting()" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">Bağla (C)</button></p>
+    </div>
     
+    <!-- 8 Slotlu Hotbar -->
     <div id="hotbar">
-        <div class="slot active" id="slot-1"><span class="key-num">1</span><span class="icon">🧱</span><span>Daş</span></div>
-        <div class="slot" id="slot-2"><span class="key-num">2</span><span class="icon">🪵</span><span>Taxta</span></div>
-        <div class="slot" id="slot-3"><span class="key-num">3</span><span class="icon">🟥</span><span>Kərpic</span></div>
+        <div class="slot active" id="slot-1"><span class="key-num">1</span><span class="icon">🧱</span><span>Daş</span><span class="count" id="hot-stone">10</span></div>
+        <div class="slot" id="slot-2"><span class="key-num">2</span><span class="icon">🪵</span><span>Taxta</span><span class="count" id="hot-wood">10</span></div>
+        <div class="slot" id="slot-3"><span class="key-num">3</span><span class="icon">🟥</span><span>Kərpic</span><span class="count">5</span></div>
         <div class="slot" id="slot-4"><span class="key-num">4</span><span class="icon">🥊</span><span>Əl</span></div>
         <div class="slot" id="slot-5"><span class="key-num">5</span><span class="icon">🔒</span><span>Bağlı</span></div>
         <div class="slot" id="slot-6"><span class="key-num">6</span><span class="icon">➖</span><span>Boş</span></div>
@@ -70,33 +88,39 @@
     </div>
 
     <div id="instructions">
-        <strong>WASD</strong>: Hərəkət | <strong>SPACE</strong>: Tullanmaq | <strong>E</strong>: Sandıq Aç | <strong>1-8</strong>: Slot seçimi | <strong>Sol Klik</strong>: Atəş/Qır
+        <strong>WASD</strong>: Hərəkət | <strong>SPACE</strong>: Tullanmaq | <strong>E</strong>: Sandıq Aç | <strong>C</strong>: Crafting Aç
     </div>
 
     <div id="canvas-container"></div>
 
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x6eb5e5);
-        scene.fog = new THREE.FogExp2(0x6eb5e5, 0.025);
+        const skyColors = { day: new THREE.Color(0x6eb5e5), night: new THREE.Color(0x0a0f24) };
+        scene.background = skyColors.day;
+        scene.fog = new THREE.FogExp2(0x6eb5e5, 0.015);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.85); sunLight.position.set(20, 50, 10); scene.add(sunLight);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8); sunLight.position.set(30, 60, 20); scene.add(sunLight);
 
         let player = {
             height: 1.8, speed: 6, yVelocity: 0, gravity: -14.0, jumpForce: 5.8, canJump: true,
-            position: new THREE.Vector3(0, 0, 12),
-            inventory: { sword: 0, apple: 0, armor: 0, pistol: 0, ammo: 0, gold: 0, bread: 0 },
+            position: new THREE.Vector3(0, 0, 25),
+            inventory: { stone: 10, wood: 10, brick: 5, brain: 0, iron: 0, bow: 0, arrow: 0, pistol: 0, ammo: 0, armor: 0, crafting_table: 0 },
             isArmorEquipped: false, maxHealth: 8, health: 8,
-            hasSwordInHand: false, hasPistolInHand: false, radius: 0.22
+            hasPistolInHand: false, radius: 0.25
         };
 
-        let mobDamageCooldown = 0; let openChestRef = null;
+        // Gecə Gündüz Zaman Sistemi (Tam dövrə: 300 saniyə = 5 dəqiqə)
+        let worldTime = 0; 
+        let isNight = false;
+        let spawnCooldown = 0;
+
+        let mobDamageCooldown = 0; let openChestRef = null; let isCraftingOpen = false;
 
         function updateHeartsUI() {
             const container = document.getElementById('heart-container'); container.innerHTML = '';
@@ -107,73 +131,104 @@
                 container.appendChild(span);
             }
         }
-        updateHeartsUI();
+        
+        // 📊 ƏŞYALARIN SAYINI YENİLƏYƏN FUNKSİYA
+        function updateResourcesUI() {
+            document.getElementById('res-wood').innerText = player.inventory.wood;
+            document.getElementById('res-stone').innerText = player.inventory.stone;
+            document.getElementById('res-brain').innerText = player.inventory.brain;
+            document.getElementById('res-iron').innerText = player.inventory.iron;
+            document.getElementById('res-bow').innerText = player.inventory.bow;
+            document.getElementById('res-arrow').innerText = player.inventory.arrow;
+            
+            // Hotbar sayları
+            document.getElementById('hot-stone').innerText = player.inventory.stone;
+            document.getElementById('hot-wood').innerText = player.inventory.wood;
+            if(player.inventory.ammo > 0) document.getElementById('ammo-display').innerText = "🔫 Güllə: " + player.inventory.ammo;
+        }
+        updateHeartsUI(); updateResourcesUI();
 
         const playerGroup = new THREE.Group();
         const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.25), new THREE.MeshLambertMaterial({ color: 0x3498db })); bodyMesh.position.y = 0.6; playerGroup.add(bodyMesh);
-        const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshLambertMaterial({ color: 0xffdbac })); headMesh.position.y = 1.4; playerGroup.add(headMesh);
         scene.add(playerGroup);
 
         const fpPistolGroup = new THREE.Group();
         const pistolMain = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.3), new THREE.MeshLambertMaterial({ color: 0x333333 })); pistolMain.position.set(0.25, -0.25, -0.4);
-        const pistolGrip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, 0.06), new THREE.MeshLambertMaterial({ color: 0x5a3d28 })); pistolGrip.position.set(0.25, -0.35, -0.3);
-        fpPistolGroup.add(pistolMain, pistolGrip); camera.add(fpPistolGroup); scene.add(camera); fpPistolGroup.visible = false;
+        fpPistolGroup.add(pistolMain); camera.add(fpPistolGroup); scene.add(camera); fpPistolGroup.visible = false;
 
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x476b26 })); ground.rotation.x = -Math.PI / 2; scene.add(ground);
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshLambertMaterial({ color: 0x557a2b })); ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
-        const collidableObjects = []; const chests = []; const mobs = []; let activeBlockType = 1;
+        const collidableObjects = []; const chests = []; const mobs = []; const droppedItems = []; const skeletonArrows = [];
 
         function logToChat(text) {
             const chat = document.getElementById('chat'); const div = document.createElement('div'); div.innerText = text; chat.appendChild(div);
             if(chat.children.length > 5) chat.removeChild(chat.children[0]);
         }
 
-        function evYarat(xPos, zPos, color, chestItems) {
+        function spawnDroppedItem(x, y, z, type, colorHex) {
+            const geo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+            const mat = new THREE.MeshLambertMaterial({ color: colorHex });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y + 0.2, z); mesh.itemType = type; scene.add(mesh); droppedItems.push(mesh);
+        }
+
+        function evYarat(xPos, zPos, color) {
             const geo = new THREE.BoxGeometry(1, 1, 1);
-            for(let x=0; x<5; x++) {
+            for(let x=0; x<6; x++) {
                 for(let y=0; y<4; y++) {
-                    for(let z=0; z<5; z++) {
-                        if((x===0 || x===4 || z===0 || z===4) || y===3) {
-                            if(z === 4 && x === 2 && (y === 0 || y === 1)) continue; 
-                            let b = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: y===3 ? 0x5a3d28 : color })); b.position.set(xPos + x, y + 0.5, zPos + z); scene.add(b); collidableObjects.push(b);
+                    for(let z=0; z<6; z++) {
+                        if((x===0 || x===5 || z===0 || z===5) || y===3) {
+                            if(z === 5 && (x === 2 || x === 3) && (y === 0 || y === 1)) continue; 
+                            let b = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: y===3 ? 0x6e473b : color })); b.position.set(xPos + x, y + 0.5, zPos + z);
+                            b.blockType = color === 0x7f8c8d ? 'stone' : 'wood';
+                            scene.add(b); collidableObjects.push(b);
                         }
                     }
                 }
             }
-            let chest = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0xd35400 })); chest.position.set(xPos + 2, 0.5, zPos + 2); chest.isChest = true; chest.items = { ...chestItems }; 
+            let chest = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0xd35400 })); 
+            chest.position.set(xPos + 3, 0.5, zPos + 3); chest.isChest = true; 
+            chest.items = { pistol: Math.random() > 0.5 ? 1 : 0, ammo: Math.floor(Math.random() * 15) + 5, bow: 1, arrow: 15 };
             scene.add(chest); chests.push(chest); collidableObjects.push(chest);
         }
         
-        evYarat(-6, -6, 0x7f8c8d, { pistol: 1, ammo: 30, bread: 3 });
-        evYarat(4, -8, 0xd2b48c, { ammo: 20, apple: 2, armor: 1 });
+        evYarat(-15, -15, 0x7f8c8d);
+        evYarat(10, -20, 0xd2b48c);
 
         function zombieYarat(x, z) {
-            const zombieGroup = new THREE.Group();
-            const zBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.2, 0.35), new THREE.MeshLambertMaterial({ color: 0x27ae60 })); zBody.position.y = 0.6; zombieGroup.add(zBody);
-            const zHead = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshLambertMaterial({ color: 0x1e824c })); zHead.position.y = 1.4; zombieGroup.add(zHead);
-            zombieGroup.position.set(x, 0, z); zombieGroup.isAlive = true; zombieGroup.health = 3; zombieGroup.radius = 0.3;
-            scene.add(zombieGroup); mobs.push(zombieGroup);
+            const zGroup = new THREE.Group();
+            const b = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), new THREE.MeshLambertMaterial({ color: 0x27ae60 })); b.position.y = 0.6; zGroup.add(b);
+            zGroup.position.set(x, 0, z); zGroup.isAlive = true; zGroup.isZombie = true; zGroup.health = 4; zGroup.radius = 0.3;
+            scene.add(zGroup); mobs.push(zGroup);
         }
-        zombieYarat(-2, -15); zombieYarat(6, -16); zombieYarat(0, -5);
+
+        function skeletonYarat(x, z) {
+            const skGroup = new THREE.Group();
+            const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshLambertMaterial({ color: 0xdde4e7 })); b.position.y = 0.6; skGroup.add(b);
+            skGroup.position.set(x, 0, z); skGroup.isAlive = true; skGroup.isSkeleton = true; skGroup.health = 3; skGroup.radius = 0.3; skGroup.shootCooldown = 0;
+            scene.add(skGroup); mobs.push(skGroup);
+        }
+
+        function golemYarat(x, z) {
+            const gGroup = new THREE.Group();
+            const b = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.6), new THREE.MeshLambertMaterial({ color: 0xecf0f1 })); b.position.y = 0.7; gGroup.add(b);
+            gGroup.position.set(x, 0, z); gGroup.isAlive = true; gGroup.isGolem = true; gGroup.health = 35; gGroup.radius = 0.5;
+            scene.add(gGroup); mobs.push(gGroup);
+        }
+        
+        // Kənd keşiyi üçün başlanğıc Qolemlər
+        golemYarat(-2, -8); golemYarat(5, -12);
 
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        let yaw = 0, pitch = 0; let isInventoryOpen = false; let isChestOpen = false;
+        let yaw = 0, pitch = 0; let isChestOpen = false;
 
-        document.body.addEventListener('click', () => { if(!isInventoryOpen && !isChestOpen) document.body.requestPointerLock(); });
+        document.body.addEventListener('click', () => { if(!isChestOpen && !isCraftingOpen) document.body.requestPointerLock(); });
         document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === document.body && !isInventoryOpen && !isChestOpen) {
+            if (document.pointerLockElement === document.body && !isChestOpen && !isCraftingOpen) {
                 yaw -= e.movementX * 0.0025; pitch -= e.movementY * 0.0025;
                 pitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, pitch));
             }
         });
-
-        function toggleInventory() {
-            if(isChestOpen) return;
-            isInventoryOpen = !isInventoryOpen;
-            const screen = document.getElementById('inventory-screen');
-            if(isInventoryOpen) { document.exitPointerLock(); screen.style.display = 'block'; yenileInventoryUI(); }
-            else { screen.style.display = 'none'; document.body.requestPointerLock(); }
-        }
 
         function openChestInventory(chestObj) {
             openChestRef = chestObj; isChestOpen = true; document.exitPointerLock();
@@ -185,112 +240,61 @@
             document.body.requestPointerLock();
         }
 
+        function toggleCrafting() {
+            isCraftingOpen = !isCraftingOpen;
+            const scr = document.getElementById('crafting-screen');
+            if(isCraftingOpen) { document.exitPointerLock(); scr.style.display = 'block'; }
+            else { scr.style.display = 'none'; document.body.requestPointerLock(); }
+        }
+
+        function craftItem(recipe) {
+            if(recipe === 'crafting_table' && player.inventory.wood >= 4) {
+                player.inventory.wood -= 4; player.inventory.crafting_table++; logToChat("📦 Craft Masası düzəldildi!");
+                document.getElementById('slot-6').innerHTML = '<span class="key-num">6</span><span class="icon">📦</span><span>Masa</span>';
+            } else if(recipe === 'pistol' && player.inventory.iron >= 3 && player.inventory.brain >= 1) {
+                player.inventory.iron -= 3; player.inventory.brain -= 1; player.hasPistolInHand = true; logToChat("🔫 Tapança Düzəldildi!");
+                document.getElementById('slot-5').innerHTML = '<span class="key-num">5</span><span class="icon">🔫</span><span>Silah</span>';
+            } else if(recipe === 'armor' && player.inventory.bow >= 1 && player.inventory.iron >= 2) {
+                player.inventory.bow -= 1; player.inventory.iron -= 2; player.isArmorEquipped = true; logToChat("👕 Güclü Zireh geyinildi!");
+            } else { logToChat("❌ Resurs çatışmır!"); }
+            updateResourcesUI();
+        }
+
         function yenileChestUI() {
             const grid = document.getElementById('chest-grid-element'); grid.innerHTML = '';
             if(!openChestRef) return;
-            const itemsData = [
-                { id: 'pistol', name: 'Tapança', icon: '🔫' }, { id: 'ammo', name: 'Güllə', icon: '⚡' },
-                { id: 'bread', name: 'Təzə Çörək', icon: '🍞' }, { id: 'apple', name: 'Alma', icon: '🍎' }, { id: 'armor', name: 'Zireh', icon: '👕' }
-            ];
-            let empty = true;
+            const itemsData = [ { id: 'pistol', name: 'Tapança', icon: '🔫' }, { id: 'ammo', name: 'Güllə', icon: '⚡' }, { id: 'bow', name: 'Yay', icon: '🏹' }, { id: 'arrow', name: 'Ox', icon: '🪶' } ];
             itemsData.forEach(item => {
                 let count = openChestRef.items[item.id] || 0;
                 if(count > 0) {
-                    empty = false;
                     let div = document.createElement('div'); div.className = 'inv-item';
-                    div.innerHTML = `<span class="icon">${item.icon}</span><b>${item.name}</b><div class="count">Sandıqda: ${count}</div>`;
-                    div.onclick = () => chestItemGotur(item.id); grid.appendChild(div);
+                    div.innerHTML = `<span class="icon">${item.icon}</span><b>${item.name}</b><div>(${count})</div>`;
+                    div.onclick = () => {
+                        openChestRef.items[item.id]--; player.inventory[item.id] += 1;
+                        if(item.id === 'pistol') { player.hasPistolInHand = true; document.getElementById('slot-5').innerHTML = '<span class="key-num">5</span><span class="icon">🔫</span><span>Silah</span>'; }
+                        logToChat(`📥 Alındı: ${item.name}`); yenileChestUI(); updateResourcesUI();
+                    };
+                    grid.appendChild(div);
                 }
             });
-            if(empty) grid.innerHTML = '<p style="grid-column:1/4; text-align:center; color:#ff8888;">Sandıq boşdur!</p>';
-        }
-
-        // 🔥 SANDIQDAN GÖTÜRƏNDƏ BİRBAŞA HOTBAR-A DÜŞMƏ MEXANİZMİ
-        function chestItemGotur(itemId) {
-            if(openChestRef && openChestRef.items[itemId] > 0) {
-                openChestRef.items[itemId]--;
-                player.inventory[itemId] = (player.inventory[itemId] || 0) + 1;
-                logToChat(`📥 Əşya götürüldü: ${itemId.toUpperCase()}`);
-
-                // Əgər tapança götürülübsə, dərhal 5-ci slotu aktivləşdir
-                if(itemId === 'pistol') {
-                    player.hasPistolInHand = true;
-                    document.getElementById('slot-5').innerHTML = '<span class="key-num">5</span><span class="icon">🔫</span><span>Silah</span>';
-                    slotSec(5);
-                }
-                // Əgər güllə götürülübsə və tapança əlimizdədirsə ekrandakı güllə sayını yenilə
-                if(itemId === 'ammo' && player.hasPistolInHand) {
-                    document.getElementById('ammo-display').innerText = `🔫 Güllə: ${player.inventory.ammo}`;
-                }
-                // Əgər yemək və ya zireh götürülübsə digər slotlara da yaza bilərik
-                if(itemId === 'bread') {
-                    document.getElementById('slot-6').innerHTML = '<span class="key-num">6</span><span class="icon">🍞</span><span>Çörək</span>';
-                }
-                if(itemId === 'armor') {
-                    document.getElementById('slot-7').innerHTML = '<span class="key-num">7</span><span class="icon">👕</span><span>Zireh</span>';
-                }
-
-                yenileChestUI();
-            }
-        }
-
-        function yenileInventoryUI() {
-            const grid = document.getElementById('inv-grid-element'); grid.innerHTML = '';
-            // Çanta menyusu sadəcə baxış üçündür
         }
 
         function slotSec(num) {
             activeBlockType = num;
             document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
             document.getElementById(`slot-${num}`).classList.add('active');
-            
-            if(num === 5 && player.hasPistolInHand) { 
-                fpPistolGroup.visible = true;
-                document.getElementById('ammo-display').style.display = 'block';
-                document.getElementById('ammo-display').innerText = `🔫 Güllə: ${player.inventory.ammo}`;
-            } else {
-                fpPistolGroup.visible = false;
-                document.getElementById('ammo-display').style.display = 'none';
-            }
-
-            // Slot 6-da çörək varsa və seçilərsə can doldursun
-            if(num === 6 && player.inventory.bread > 0) {
-                if(player.health < player.maxHealth) {
-                    player.inventory.bread--;
-                    player.health = Math.min(player.maxHealth, player.health + 2);
-                    updateHeartsUI(); logToChat("🍞 Çörək yeyildi! +2 Can.");
-                    if(player.inventory.bread <= 0) document.getElementById('slot-6').innerHTML = '<span class="key-num">6</span><span class="icon">➖</span><span>Boş</span>';
-                }
-            }
-            // Slot 7-də zireh varsa və seçilərsə geyinsin
-            if(num === 7 && player.inventory.armor > 0) {
-                player.inventory.armor--; player.isArmorEquipped = true;
-                bodyMesh.material.color.setHex(0x00ffff);
-                document.getElementById('armor-status').innerText = "🛡️ Zireh: Almaz Köynək (Aktiv)";
-                logToChat("👕 Zireh geyinildi!");
-                document.getElementById('slot-7').innerHTML = '<span class="key-num">7</span><span class="icon">➖</span><span>Boş</span>';
-            }
+            if(num === 5 && player.hasPistolInHand) { fpPistolGroup.visible = true; document.getElementById('ammo-display').style.display = 'block'; }
+            else { fpPistolGroup.visible = false; document.getElementById('ammo-display').style.display = 'none'; }
         }
 
-        const raycaster = new THREE.Raycaster();
-        const screenCenter = new THREE.Vector2(0, 0);
-
         document.addEventListener('keydown', (e) => {
-            if(e.code === 'KeyE') { 
-                e.preventDefault(); if(isChestOpen) { closeChestInventory(); return; }
-                raycaster.setFromCamera(screenCenter, camera);
-                const chestIntersects = raycaster.intersectObjects(chests);
-                if (chestIntersects.length > 0 && chestIntersects[0].distance < 4.0) { openChestInventory(chestIntersects[0].object); return; }
-            }
-            if(isInventoryOpen || isChestOpen) return;
+            if(e.code === 'KeyE') { e.preventDefault(); if(isChestOpen) { closeChestInventory(); return; } const r = new THREE.Raycaster(); r.setFromCamera(screenCenter, camera); const intersects = r.intersectObjects(chests); if(intersects.length>0 && intersects[0].distance<4) openChestInventory(intersects[0].object); }
+            if(e.code === 'KeyC') { e.preventDefault(); toggleCrafting(); }
+            if(isChestOpen || isCraftingOpen) return;
             if(e.code === 'KeyW') moveForward = true; if(e.code === 'KeyS') moveBackward = true;
             if(e.code === 'KeyA') moveLeft = true; if(e.code === 'KeyD') moveRight = true;
             if(e.code === 'Space' && player.canJump) { player.yVelocity = player.jumpForce; player.canJump = false; }
-            
-            if(e.key >= '1' && e.key <= '8') {
-                if(e.key === '5' && !player.hasPistolInHand) return;
-                slotSec(parseInt(e.key));
-            }
+            if(e.key >= '1' && e.key <= '8') slotSec(parseInt(e.key));
         });
 
         document.addEventListener('keyup', (e) => {
@@ -298,67 +302,52 @@
             if(e.code === 'KeyA') moveLeft = false; if(e.code === 'KeyD') moveRight = false;
         });
 
+        const screenCenter = new THREE.Vector2(0, 0);
         document.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement !== document.body || isInventoryOpen || isChestOpen) return;
-            raycaster.setFromCamera(screenCenter, camera);
+            if (document.pointerLockElement !== document.body || isChestOpen || isCraftingOpen) return;
+            const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(screenCenter, camera);
 
             if (e.button === 0) { 
                 if(activeBlockType === 5 && player.hasPistolInHand) {
                     if(player.inventory.ammo <= 0) { logToChat("❌ Güllə bitdi!"); return; }
-                    player.inventory.ammo--; document.getElementById('ammo-display').innerText = `🔫 Güllə: ${player.inventory.ammo}`;
-                    fpPistolGroup.position.z = 0.1; setTimeout(() => fpPistolGroup.position.z = 0, 80);
-
+                    player.inventory.ammo--; updateResourcesUI();
+                    
                     const hitMobs = raycaster.intersectObjects(mobs.filter(m => m.isAlive), true);
-                    if(hitMobs.length > 0 && hitMobs[0].distance < 20) {
-                        let zombie = hitMobs[0].object.parent || hitMobs[0].object;
-                        zombie.health -= 1.5; logToChat(`🎯 Zombi vuruldu! Canı: ${Math.max(0, zombie.health)}`);
-                        if(zombie.health <= 0) { zombie.isAlive = false; scene.remove(zombie); logToChat("💀 Zombi öldü!"); }
+                    if(hitMobs.length > 0 && hitMobs[0].distance < 25) {
+                        let mob = hitMobs[0].object.parent || hitMobs[0].object;
+                        mob.health -= 1.5; logToChat(`🎯 Canlıya zərər verildi! Canı: ${Math.max(0, mob.health.toFixed(1))}`);
+                        
+                        if(mob.health <= 0) {
+                            mob.isAlive = false; scene.remove(mob);
+                            if(mob.isZombie) spawnDroppedItem(mob.position.x, mob.position.y, mob.position.z, 'brain', 0x962d2d);
+                            if(mob.isGolem) spawnDroppedItem(mob.position.x, mob.position.y, mob.position.z, 'iron', 0xdde4e7);
+                            if(mob.isSkeleton) { spawnDroppedItem(mob.position.x, mob.position.y, mob.position.z, 'bow', 0x8a5a36); spawnDroppedItem(mob.position.x+0.2, mob.position.y, mob.position.z, 'arrow', 0xffffff); }
+                            logToChat("💀 Canlı öldü və əşyası yerə düşdü!");
+                        }
                     }
                     return;
-                }
-
-                const zombiVuruldumu = raycaster.intersectObjects(mobs.filter(m => m.isAlive), true);
-                if(zombiVuruldumu.length > 0 && zombiVuruldumu[0].distance < 4.0) {
-                    let hitZombie = zombiVuruldumu[0].object.parent || zombiVuruldumu[0].object;
-                    hitZombie.health -= 0.5;
-                    if(hitZombie.health <= 0) { hitZombie.isAlive = false; scene.remove(hitZombie); }
-                    return; 
                 }
 
                 const intersects = raycaster.intersectObjects(collidableObjects);
                 if (intersects.length > 0 && intersects[0].distance < 5) {
                     const obj = intersects[0].object;
-                    if(!obj.isChest) { scene.remove(obj); collidableObjects.splice(collidableObjects.indexOf(obj), 1); }
-                }
-            } 
-            else if (e.button === 2) {
-                const intersects = raycaster.intersectObjects(collidableObjects);
-                if (intersects.length > 0 && intersects[0].distance < 5 && (activeBlockType <= 3 || activeBlockType >= 8)) {
-                    let type = activeBlockType > 3 ? 1 : activeBlockType;
-                    let colors = { 1: 0x7f8c8d, 2: 0x8a5a36, 3: 0xd35400 };
-                    let newB = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshLambertMaterial({ color: colors[type] }));
-                    newB.position.copy(intersects[0].object.position).add(intersects[0].face.normal);
-                    scene.add(newB); collidableObjects.push(newB);
+                    if(!obj.isChest) {
+                        spawnDroppedItem(obj.position.x, obj.position.y, obj.position.z, obj.blockType || 'stone', 0x888888);
+                        scene.remove(obj); collidableObjects.splice(collidableObjects.indexOf(obj), 1);
+                    }
                 }
             }
         });
 
-        document.addEventListener('contextmenu', e => e.preventDefault());
-
         function checkCollision(oldPos, newPos, radius, isPlayer = true) {
             if(newPos.y < 0) return;
             for (let i = 0; i < collidableObjects.length; i++) {
-                let block = collidableObjects[i];
-                let bX = block.position.x; let bY = block.position.y; let bZ = block.position.z;
-                
+                let block = collidableObjects[i]; let bX = block.position.x; let bY = block.position.y; let bZ = block.position.z;
                 let insideX = (newPos.x + radius > bX - 0.5) && (newPos.x - radius < bX + 0.5);
                 let insideZ = (newPos.z + radius > bZ - 0.5) && (newPos.z - radius < bZ + 0.5);
                 let insideY = (newPos.y < bY + 0.5) && (newPos.y + 1.8 > bY - 0.5);
-
                 if (insideX && insideZ && insideY) {
-                    if (isPlayer && oldPos.y >= bY + 0.5 && player.yVelocity <= 0) {
-                        newPos.y = bY + 0.5; player.yVelocity = 0; player.canJump = true; return;
-                    }
+                    if (isPlayer && oldPos.y >= bY + 0.5 && player.yVelocity <= 0) { newPos.y = bY + 0.5; player.yVelocity = 0; player.canJump = true; return; }
                     newPos.x = oldPos.x; newPos.z = oldPos.z;
                 }
             }
@@ -370,6 +359,39 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             let oldPosition = player.position.clone();
+
+            // 🌓 GECƏ/GÜNDÜZ ZAMAN SİSTEMİ (Hər 5 dəqiqədən = 300 saniyədən bir dəyişir)
+            worldTime += delta * 15; // Sürətləndirilmiş zaman axışı
+            let currentCycle = Math.floor(worldTime / 150) % 2; // 0 = Gündüz, 1 = Gecə
+            let minutes = Math.floor(worldTime / 60) % 60;
+            let seconds = Math.floor(worldTime) % 60;
+            let timeString = (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+
+            if (currentCycle === 0) {
+                isNight = false;
+                scene.background = skyColors.day;
+                scene.fog.color = skyColors.day;
+                ambientLight.intensity = 0.6;
+                document.getElementById('time-display').innerText = `☀️ GÜNDÜZ (Zaman: ${timeString})`;
+            } else {
+                isNight = true;
+                scene.background = skyColors.night;
+                scene.fog.color = skyColors.night;
+                ambientLight.intensity = 0.15; // Hava qaralır
+                document.getElementById('time-display').innerText = `🌙 GECƏ (Zaman: ${timeString})`;
+            }
+
+            // 🧟 GECƏ ZOMBİ SPAWN MEXANİZMİ
+            if(isNight) {
+                spawnCooldown -= delta;
+                if(spawnCooldown <= 0) {
+                    spawnCooldown = 8.0; // Hər 8 saniyədən bir düşmən doğulur
+                    let sX = player.position.x + (Math.random() * 30 - 15);
+                    let sZ = player.position.z + (Math.random() * 30 - 15);
+                    if(Math.random() > 0.4) { zombieYarat(sX, sZ); logToChat("🧟 Qaranlıqdan bir Zombi doğuldu!"); }
+                    else { skeletonYarat(sX, sZ); logToChat("💀 Bir Skelet oyandı!"); }
+                }
+            }
 
             player.yVelocity += player.gravity * delta;
             let newPos = player.position.clone(); newPos.y += player.yVelocity * delta;
@@ -386,31 +408,89 @@
 
             checkCollision(oldPosition, newPos, player.radius, true);
             player.position.copy(newPos);
-            playerGroup.position.copy(player.position); playerGroup.rotation.y = yaw;
+            playerGroup.position.copy(player.position);
+
+            // Yerə düşən əşyaları toplamaq
+            for(let i = droppedItems.length - 1; i >= 0; i--) {
+                let item = droppedItems[i]; item.rotation.y += 2 * delta;
+                if(player.position.distanceTo(item.position) < 1.4) {
+                    player.inventory[item.itemType] = (player.inventory[item.itemType] || 0) + 1;
+                    logToChat(`🎒 Əşya yığıldı: +1 ${item.itemType.toUpperCase()}`);
+                    scene.remove(item); droppedItems.splice(i, 1); updateResourcesUI();
+                }
+            }
 
             if(mobDamageCooldown > 0) mobDamageCooldown -= delta;
-            mobs.forEach(zombie => {
-                if(zombie.isAlive) {
-                    let oldZombiePos = zombie.position.clone();
-                    let yön = new THREE.Vector3().subVectors(player.position, zombie.position);
-                    let məsafe = yön.length(); yön.y = 0; yön.normalize();
-                    
-                    let newZombiePos = zombie.position.clone();
-                    if(məsafe < 16 && məsafe > 1.1) {
-                        newZombiePos.addScaledVector(yön, 1.4 * delta);
-                        zombie.lookAt(player.position.x, zombie.position.y, player.position.z);
+
+            // 🤖 LIVE AI VƏ QOLEM MÜHARİBƏ MEXANİZMİ
+            mobs.forEach((mob, index) => {
+                if(mob.isAlive) {
+                    // Düşmənlərin oyunçuya hücumu
+                    if(mob.isZombie || mob.isSkeleton) {
+                        let toPlayerDir = new THREE.Vector3().subVectors(player.position, mob.position);
+                        let distToPlayer = toPlayerDir.length();
+
+                        if(mob.isZombie && distToPlayer < 16) {
+                            toPlayerDir.y = 0; toPlayerDir.normalize();
+                            mob.position.addScaledVector(toPlayerDir, 1.8 * delta);
+                            if(distToPlayer <= 1.3 && mobDamageCooldown <= 0) {
+                                player.health -= player.isArmorEquipped ? 0.25 : 0.5;
+                                mobDamageCooldown = 1.0; updateHeartsUI(); logToChat("💥 Zombi sizə vurdu!");
+                                if(player.health <= 0) { alert("❌ Öldünüz!"); location.reload(); }
+                            }
+                        }
+                        if(mob.isSkeleton && distToPlayer <= 11) {
+                            mob.lookAt(player.position.x, mob.position.y, player.position.z);
+                            mob.shootCooldown -= delta;
+                            if(mob.shootCooldown <= 0) {
+                                mob.shootCooldown = 2.5;
+                                const arrow = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.3), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                                arrow.position.copy(mob.position).y += 0.8; arrow.lookAt(player.position);
+                                arrow.velocity = new THREE.Vector3().subVectors(player.position, arrow.position).normalize().multiplyScalar(12);
+                                scene.add(arrow); skeletonArrows.push(arrow);
+                            }
+                        }
                     }
 
-                    checkCollision(oldZombiePos, newZombiePos, zombie.radius, false);
-                    zombie.position.copy(newZombiePos);
+                    // ⚔️ QOLEM SAVAŞ AI: Gecə mənfurlarını axtarır və öldürür
+                    if(mob.isGolem) {
+                        let targetMob = null; let closestDist = 20;
+                        mobs.forEach(otherMob => {
+                            if(otherMob.isAlive && (otherMob.isZombie || otherMob.isSkeleton)) {
+                                let d = mob.position.distanceTo(otherMob.position);
+                                if(d < closestDist) { closestDist = d; targetMob = otherMob; }
+                            }
+                        });
 
-                    if(məsafe <= 1.2 && mobDamageCooldown <= 0) {
-                        player.health -= 0.5; mobDamageCooldown = 1.5; updateHeartsUI();
-                        logToChat(`💥 Zombi vurdu! -0.5 can.`);
-                        if(player.health <= 0) { alert("❌ Öldünüz!"); location.reload(); }
+                        if(targetMob) {
+                            let gDir = new THREE.Vector3().subVectors(targetMob.position, mob.position);
+                            gDir.y = 0; gDir.normalize();
+                            mob.position.addScaledVector(gDir, 3.0 * delta); // Qolem canavara doğru qaçır
+                            mob.lookAt(targetMob.position.x, mob.position.y, targetMob.position.z);
+
+                            if(closestDist <= 1.6) {
+                                targetMob.health -= 10 * delta; // Qolem canavarı darmadağın edir
+                                if(targetMob.health <= 0 && targetMob.isAlive) {
+                                    targetMob.isAlive = false; scene.remove(targetMob);
+                                    if(targetMob.isZombie) spawnDroppedItem(targetMob.position.x, targetMob.position.y, targetMob.position.z, 'brain', 0x962d2d);
+                                    if(targetMob.isSkeleton) spawnDroppedItem(targetMob.position.x, targetMob.position.y, targetMob.position.z, 'arrow', 0xffffff);
+                                    logToChat("🤖 [Qolem] Bir canavarı məhv etdi!");
+                                }
+                            }
+                        }
                     }
                 }
             });
+
+            // Oxların uçuşu
+            for(let i = skeletonArrows.length - 1; i >= 0; i--) {
+                let arrow = skeletonArrows[i]; arrow.position.addScaledVector(arrow.velocity, delta);
+                if(arrow.position.distanceTo(player.position) < 0.8) {
+                    player.health -= 0.5; updateHeartsUI(); logToChat("🏹 Ox dəydi!");
+                    scene.remove(arrow); skeletonArrows.splice(i, 1);
+                    if(player.health <= 0) { alert("❌ Öldünüz!"); location.reload(); }
+                } else if(arrow.position.y < 0) { scene.remove(arrow); skeletonArrows.splice(i, 1); }
+            }
 
             camera.position.set(player.position.x, player.position.y + player.height, player.position.z);
             const target = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
@@ -420,10 +500,7 @@
         }
         animate();
 
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
     </script>
 </body>
 </html>
