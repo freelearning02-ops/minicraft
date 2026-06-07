@@ -2,133 +2,268 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <title>Minecraft 3D Şəhər və Sandıqlar</title>
+    <title>Minecraft RPG Edition</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #1a1a1a; font-family: sans-serif; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; user-select: none; }
         #canvas-container { width: 100vw; height: 100vh; display: block; }
-        #ui { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 10px; color: white; pointer-events: none; text-align: center; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; transform: translate(-50%, -50%); pointer-events: none; }
-        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: white; }
-        #crosshair::before { top: 5px; left: 0; width: 12px; height: 2px; }
-        #crosshair::after { top: 0; left: 5px; width: 2px; height: 12px; }
-        #chat { position: absolute; top: 20px; left: 20px; width: 300px; height: 150px; background: rgba(0,0,0,0.4); color: #5cbf5c; padding: 10px; border-radius: 5px; font-family: monospace; overflow-y: hidden; pointer-events: none; }
+        
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.8); }
+        #crosshair::before { top: 7px; left: 0; width: 16px; height: 2px; }
+        #crosshair::after { top: 0; left: 7px; width: 2px; height: 16px; }
+        
+        #chat { position: absolute; top: 20px; left: 20px; width: 340px; height: 160px; background: rgba(0,0,0,0.5); color: #a8ffb2; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; overflow-y: hidden; pointer-events: none; box-shadow: inset 0 0 10px rgba(0,0,0,0.6); }
+        
+        /* İnventar Ekranı (E düyməsinə basanda açılır) */
+        #inventory-screen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: rgba(40, 40, 40, 0.95); border: 3px solid #555; border-radius: 10px; color: white; padding: 20px; box-shadow: 0 0 25px rgba(0,0,0,0.8); z-index: 20; }
+        .inv-title { text-align: center; margin-top: 0; color: #f1c40f; font-size: 18px; border-bottom: 2px solid #555; padding-bottom: 10px; }
+        .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .inv-item { background: #1e1e1e; border: 2px solid #444; padding: 10px; text-align: center; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .inv-item:hover { border-color: #f1c40f; background: #2a2a2a; }
+        .inv-item .icon { font-size: 24px; display: block; }
+        .inv-item .count { font-size: 11px; color: #aaa; }
+        
+        /* Alt Əşya Paneli (Hotbar) */
+        #hotbar { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(20, 20, 20, 0.85); padding: 6px; border-radius: 8px; border: 2px solid #555; box-shadow: 0 8px 20px rgba(0,0,0,0.7); pointer-events: none; }
+        .slot { width: 55px; height: 55px; margin: 0 4px; border: 3px solid #3a3a3a; background: #222; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-size: 10px; font-weight: bold; position: relative; }
+        .slot.active { border-color: #f1c40f; background: #333; box-shadow: 0 0 12px #f1c40f; }
+        .slot .key-num { position: absolute; top: 2px; left: 4px; color: #888; font-size: 9px; }
+        .slot .icon { font-size: 22px; }
+
+        /* Zireh (Geyinilən Paltar) Paneli */
+        #armor-status { position: absolute; bottom: 85px; left: 20px; background: rgba(0,0,0,0.6); color: white; padding: 10px; border-radius: 6px; font-size: 13px; pointer-events: none; }
+
+        #instructions { position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; pointer-events: none; text-align: center; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
     <div id="crosshair"></div>
-    <div id="chat"><div>Sistem: Oyun başladı!</div></div>
-    <div id="ui">
-        <strong>WASD</strong>: Gəzinti | <strong>SPACE</strong>: Hoppanmaq | <strong>Siçan</strong>: Baxış (Kliklə) <br>
-        <strong>Sandığa Sol Klik</strong>: Aç və İçindəkinə Bax
+    <div id="chat"><div>[Sistem] Dünyaya xoş gəldiniz! Binalara girin və Sandıqları tapın!</div></div>
+    
+    <div id="armor-status">🛡️ Zireh: Yok</div>
+
+    <div id="inventory-screen">
+        <h3 class="inv-title">🎒 Çantanız (İnventar)</h3>
+        <p style="font-size:11px; color:#ccc; text-align:center; margin:0;">Əşyanın üzərinə klikləyərək onu istifadə edin və ya geyinin!</p>
+        <div class="inv-grid" id="inv-grid-element">
+            </div>
+        <p style="text-align:center; margin-bottom:0;"><button onclick="toggleInventory()" style="background:#e74c3c; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Bağla (E)</button></p>
     </div>
+    
+    <div id="hotbar">
+        <div class="slot active" id="slot-1"><span class="key-num">1</span><span class="icon">🧱</span><span>Daş</span></div>
+        <div class="slot" id="slot-2"><span class="key-num">2</span><span class="icon">🪵</span><span>Taxta</span></div>
+        <div class="slot" id="slot-3"><span class="key-num">3</span><span class="icon">🟥</span><span>Kərpic</span></div>
+        <div class="slot" id="slot-4"><span class="key-num">4</span><span class="icon">🥊</span><span>Əl</span></div>
+    </div>
+
+    <div id="instructions">
+        <strong>WASD</strong>: Hərəkət | <strong>SPACE</strong>: Tullanmaq | <strong>E</strong>: İnventar Aç/Bağla | <strong>F5</strong>: Kamera Dəyiş | <strong>Sol Klik</strong>: Qır/Vur/Aç | <strong>Sağ Klik</strong>: Blok Qoy
+    </div>
+
     <div id="canvas-container"></div>
 
     <script>
-        // 1. SƏHNƏ VƏ KAMERA AYARLARI
+        // 1. SƏHNƏ VƏ KAMERA SETUP
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x7befb2); // Göy üzü rəngi
-        scene.fog = new THREE.FogExp2(0x7befb2, 0.03);
+        scene.background = new THREE.Color(0x6eb5e5);
+        scene.fog = new THREE.FogExp2(0x6eb5e5, 0.03);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        // İşıqlar
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(20, 40, 20);
-        scene.add(dirLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        sunLight.position.set(30, 60, 20);
+        scene.add(sunLight);
 
-        // 2. FİZİKA VƏ OYUNÇU AYARLARI
+        // 2. OYUNÇU, FİZİKA VƏ KAMERA REJİMLƏRİ
         let player = {
             height: 1.8,
-            speed: 6,
+            speed: 7,
             yVelocity: 0,
-            grec: -9.8, // Qravitasiya gücü
-            jumpForce: 4.5,
-            canJump: true
+            gravity: -13.0,
+            jumpForce: 5.5,
+            canJump: true,
+            position: new THREE.Vector3(0, 0, 8),
+            inventory: { sword: 0, apple: 0, armor: 0 },
+            isArmorEquipped: false
         };
-        camera.position.set(0, player.height, 5);
 
-        // 3. DÜNYA, BALACA ŞƏHƏR VƏ SANDIQLARIN YARADILMASI
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const objects = [];
-        const chests = [];
+        // Kamera Rejimi: 0 = 1-ci şəxs (Gözdən), 1 = 3-cü şəxs (Arxadan baxış)
+        let cameraMode = 0; 
+        
+        // Oyunçu xarakterinin 3D modeli (F5-də özümüzü görmək üçün)
+        const playerGroup = new THREE.Group();
+        const bodyGeo = new THREE.BoxGeometry(0.6, 1.2, 0.4);
+        const bodyMat = new THREE.MeshLambertMaterial({ color: 0x3498db }); // Göy köynək
+        const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+        bodyMesh.position.y = 0.6;
+        playerGroup.add(bodyMesh);
 
-        // Yaşıl Yer (Zəmin)
+        const headGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+        const headMat = new THREE.MeshLambertMaterial({ color: 0xffdbac }); // Dəri rəngi baş
+        const headMesh = new THREE.Mesh(headGeo, headMat);
+        headMesh.position.y = 1.4;
+        playerGroup.add(headMesh);
+        
+        // Əlimizdəki qılıncın 3D vizual modeli
+        const swordVisualGeo = new THREE.BoxGeometry(0.1, 0.8, 0.1);
+        const swordVisualMat = new THREE.MeshLambertMaterial({ color: 0x00ffff }); // Almaz rəngi
+        const swordVisualMesh = new THREE.Mesh(swordVisualGeo, swordVisualMat);
+        swordVisualMesh.position.set(0.4, 0.6, -0.3);
+        swordVisualMesh.rotation.x = Math.PI / 4;
+        swordVisualMesh.visible = false; // Başlanğıcda gizli
+        playerGroup.add(swordVisualMesh);
+
+        scene.add(playerGroup);
+
+        // Zəmin
         const groundGeo = new THREE.PlaneGeometry(100, 100);
-        const groundMat = new THREE.MeshLambertMaterial({ color: 0x557a2b });
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x476b26 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
-        ground.position.y = 0;
         scene.add(ground);
+
+        const collidableObjects = [];
+        const chests = [];
+        let activeBlockType = 1; // 1: Daş, 2: Taxta, 3: Kərpic, 4: Əl
 
         function logToChat(text) {
             const chat = document.getElementById('chat');
-            const newLog = document.createElement('div');
-            newLog.innerText = text;
-            chat.appendChild(newLog);
+            const div = document.createElement('div');
+            div.innerText = text;
+            chat.appendChild(div);
             if(chat.children.length > 6) chat.removeChild(chat.children[0]);
         }
 
-        // Balaca Şəhər Binaları (Qabağımızda yaranır)
-        const binaMateriallari = [0x7f8c8d, 0x95a5a6, 0x34495e, 0xd2d7d9];
-        
-        // 5 dənə bina tikirik
-        for (let b = 0; b < 5; b++) {
-            let bHundur = Math.floor(Math.random() * 4) + 3; // 3-6 blok hündürlükdə binalar
-            let bX = (b * 4) - 8;
-            let bZ = -6; // Oyunçunun qabağında
-
-            for (let h = 0; h < bHundur; h++) {
-                for (let w = 0; w < 3; w++) {
-                    for (let d = 0; d < 3; d++) {
-                        // Binaların içini boş qoyuruq, sadəcə divarlar
-                        if (w === 0 || w === 2 || d === 0 || d === 2 || h === bHundur - 1) {
-                            let mat = new THREE.MeshLambertMaterial({ color: binaMateriallari[b % binaMateriallari.length] });
-                            let blockMesh = new THREE.Mesh(geometry, mat);
-                            blockMesh.position.set(bX + w, h + 0.5, bZ + d);
-                            scene.add(blockMesh);
-                            objects.push(blockMesh);
+        // 3. ƏSL EVLƏR VƏ SANDIQLAR
+        function evYarat(xPos, zPos, divarColor) {
+            const size = 5;
+            const height = 4;
+            const geo = new THREE.BoxGeometry(1, 1, 1);
+            
+            for(let x=0; x<size; x++) {
+                for(let y=0; y<height; y++) {
+                    for(let z=0; z<size; z++) {
+                        let isWall = (x===0 || x===size-1 || z===0 || z===size-1);
+                        let isRoof = (y===height-1);
+                        
+                        if(isWall || isRoof) {
+                            if(z === size-1 && x === 2 && (y === 0 || y === 1)) continue; // Qapı yeri
+                            
+                            let mat = new THREE.MeshLambertMaterial({ color: isRoof ? 0x7e3d11 : divarColor });
+                            let b = new THREE.Mesh(geo, mat);
+                            b.position.set(xPos + x, y + 0.5, zPos + z);
+                            scene.add(b);
+                            collidableObjects.push(b);
                         }
                     }
                 }
             }
-
-            // Hər binanın önünə bir dənə Sandıq (Chest) qoyuruq (Qəhvəyi rəngdə)
-            let chestMat = new THREE.MeshLambertMaterial({ color: 0x8a5a36 }); // Qəhvəyi
-            let chest = new THREE.Mesh(geometry, chestMat);
-            chest.position.set(bX + 1, 0.5, bZ + 4);
+            
+            // Hər evin içinə sandıq qoyuruq
+            let cMat = new THREE.MeshLambertMaterial({ color: 0xd35400 });
+            let chest = new THREE.Mesh(geo, cMat);
+            chest.position.set(xPos + 2, 0.5, zPos + 2);
             chest.isChest = true;
             chest.opened = false;
-            // Sandığın içindəki təsadüfi əşyalar
-            const esyalar = ["💎 Almaz Qılınc", "🍏 Qızıl Alma", "🏹 Güclü Yay", "👑 Almaz Zireh", "🥩 Bişmiş Ət"];
-            chest.loot = esyalar[Math.floor(Math.random() * esyalar.length)];
-            
             scene.add(chest);
             chests.push(chest);
-            objects.push(chest);
+            collidableObjects.push(chest);
         }
 
-        // 4. HƏRƏKƏT VƏ SİÇAN AYARLARI
+        evYarat(-6, -8, 0x95a5a6);
+        evYarat(4, -10, 0xd2b48c);
+
+        // 4. HƏRƏKƏT VƏ SEÇİMLƏR
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         let yaw = 0, pitch = 0;
+        let isInventoryOpen = false;
 
-        document.body.addEventListener('click', () => { document.body.requestPointerLock(); });
+        document.body.addEventListener('click', () => {
+            if(!isInventoryOpen) document.body.requestPointerLock();
+        });
 
         document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === document.body) {
-                yaw -= e.movementX * 0.002;
-                pitch -= e.movementY * 0.002;
+            if (document.pointerLockElement === document.body && !isInventoryOpen) {
+                yaw -= e.movementX * 0.0025;
+                pitch -= e.movementY * 0.0025;
                 pitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, pitch));
             }
         });
 
+        // İnventar pəncərəsini açıb-bağlamaq funksiyası
+        function toggleInventory() {
+            isInventoryOpen = !isInventoryOpen;
+            const screen = document.getElementById('inventory-screen');
+            if(isInventoryOpen) {
+                document.exitPointerLock();
+                screen.style.display = 'block';
+                yenileInventoryUI();
+            } else {
+                screen.style.display = 'none';
+                document.body.requestPointerLock();
+            }
+        }
+
+        // İnventar menyusunu çantadakı əşyalara görə yeniləmək
+        function yenileInventoryUI() {
+            const grid = document.getElementById('inv-grid-element');
+            grid.innerHTML = '';
+            
+            const items = [
+                { id: 'sword', name: 'Almaz Qılınc', icon: '⚔️', count: player.inventory.sword },
+                { id: 'apple', name: 'Sehrli Alma', icon: '🍎', count: player.inventory.apple },
+                { id: 'armor', name: 'Almaz Zireh', icon: '👕', count: player.inventory.armor }
+            ];
+            
+            items.forEach(item => {
+                if(item.count > 0) {
+                    let div = document.createElement('div');
+                    div.className = 'inv-item';
+                    div.innerHTML = `<span class="icon">${item.icon}</span><b>${item.name}</b><div class="count">Say: ${item.count}</div>`;
+                    div.onclick = () => itemIstifadeEt(item.id);
+                    grid.appendChild(div);
+                }
+            });
+            if(grid.innerHTML === '') grid.innerHTML = '<p style="grid-column:1/5; text-align:center; color:#888;">Çantanız boşdur! Sandıqları tapın.</p>';
+        }
+
+        // ƏŞYALARI İSTİFADƏ ETMƏK MEXANİZMİ
+        function itemIstifadeEt(itemId) {
+            if(itemId === 'apple') {
+                player.inventory.apple--;
+                logToChat("🍎 Almanı yedin! Sənə qeyri-adi güc və gümrahlıq gəldi.");
+            } 
+            else if(itemId === 'armor') {
+                player.inventory.armor--;
+                player.isArmorEquipped = true;
+                bodyMesh.material.color.setHex(0x00ffff); // Paltarı geyinəndə xarakterin bədəni almaz rənginə dönür
+                document.getElementById('armor-status').innerText = "🛡️ Zireh: Almaz Köynək (Aktiv)";
+                logToChat("👕 Almaz Zirehi geyindin! Müdafiən maksimuma çatdı.");
+            }
+            else if(itemId === 'sword') {
+                logToChat("⚔️ Qılınc ələ alındı! İndi qabağındakı blokları vurub parçalaya bilərsən.");
+                swordVisualMesh.visible = true; // Qılıncı görünən edirik
+                // Hotbarda 4-cü slotu qılınca çeviririk
+                document.getElementById('slot-4').innerHTML = '<span class="key-num">4</span><span class="icon">⚔️</span><span>Qılınc</span>';
+                activeBlockType = 4;
+                document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
+                document.getElementById('slot-4').classList.add('active');
+            }
+            yenileInventoryUI();
+        }
+
         document.addEventListener('keydown', (e) => {
+            if(e.code === 'KeyE') { e.preventDefault(); toggleInventory(); }
+            if(isInventoryOpen) return;
+
             if(e.code === 'KeyW') moveForward = true;
             if(e.code === 'KeyS') moveBackward = true;
             if(e.code === 'KeyA') moveLeft = true;
@@ -136,9 +271,22 @@
             if(e.code === 'Space' && player.canJump) {
                 player.yVelocity = player.jumpForce;
                 player.canJump = false;
-                logToChat("Hoppandın!");
+            }
+            
+            // F5 Düyməsi ilə Kamera Rejimini Dəyişmək
+            if(e.code === 'F5') {
+                e.preventDefault();
+                cameraMode = (cameraMode + 1) % 2; 
+                logToChat(cameraMode === 1 ? "🎥 3-cü şəxs kamerasına keçildi (Öz xarakterinizi görürsünüz)." : "🎥 1-ci şəxs kamerasına keçildi.");
+            }
+
+            if(e.key >= '1' && e.key <= '4') {
+                activeBlockType = parseInt(e.key);
+                document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
+                document.getElementById(`slot-${e.key}`).classList.add('active');
             }
         });
+
         document.addEventListener('keyup', (e) => {
             if(e.code === 'KeyW') moveForward = false;
             if(e.code === 'KeyS') moveBackward = false;
@@ -146,66 +294,116 @@
             if(e.code === 'KeyD') moveRight = false;
         });
 
-        // 5. SANDIQ AÇMA MEXANİZMİ
+        // 5. SOL/SAĞ KLİK, QILINC SALLAMA VƏ SANDIQ AÇMA
         const raycaster = new THREE.Raycaster();
-        const centerMouse = new THREE.Vector2(0, 0);
+        const screenCenter = new THREE.Vector2(0, 0);
 
         document.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement !== document.body) return;
+            if (document.pointerLockElement !== document.body || isInventoryOpen) return;
             
-            if (e.button === 0) { // Sol Klik
-                raycaster.setFromCamera(centerMouse, camera);
-                const intersects = raycaster.intersectObjects(chests);
+            raycaster.setFromCamera(screenCenter, camera);
+            const intersects = raycaster.intersectObjects(collidableObjects);
 
-                if (intersects.length > 0 && intersects[0].distance < 4) {
-                    const hitChest = intersects[0].object;
-                    if (!hitChest.opened) {
-                        hitChest.opened = true;
-                        hitChest.material.color.setHex(0xd25d1e); // Açılan sandıq narıncı rəngə boyanır
-                        logToChat(`🧰 Sandıq açıldı!`);
-                        logToChat(`🎁 Tapılan əşya: ${hitChest.loot}`);
+            // SOL KLİK: Vurmaq / Sandıq Açmaq / Qırmaq
+            if (e.button === 0) {
+                // Əgər əlimizdə qılınc varsa, vurma animasiyası animasiya dövründə tetiklenecek
+                if(activeBlockType === 4 && swordVisualMesh.visible) {
+                    swordVisualMesh.rotation.z = Math.PI / 3; // Qılıncı vurma vəziyyətinə gətir
+                    setTimeout(() => { swordVisualMesh.rotation.z = 0; }, 150);
+                }
+
+                if (intersects.length > 0 && intersects[0].distance < 5) {
+                    const obj = intersects[0].object;
+                    
+                    if (obj.isChest) {
+                        if (!obj.opened) {
+                            obj.opened = true;
+                            obj.material.color.setHex(0x27ae60); // Açılan sandıq yaşıl olur
+                            
+                            // Sandıqdan çıxan 3 əsas əşyanı inventara əlavə edirik
+                            player.inventory.sword += 1;
+                            player.inventory.apple += 1;
+                            player.inventory.armor += 1;
+                            
+                            logToChat("🧰 Sandığı açdınız! Çantanıza əşyalar gəldi:");
+                            logToChat("🎁 [1x ⚔️ Almaz Qılınc], [1x 🍎 Sehrli Alma], [1x 👕 Almaz Zireh]");
+                            logToChat("💡 Əşyaları istifadə etmək üçün 'E' hərfinə basıb İnventarı açın!");
+                        } else {
+                            logToChat("[Sistem] Sandıq boşdur.");
+                        }
                     } else {
-                        logToChat("Bu sandıq artıq boşdur.");
+                        // Qılıncla və ya əllə bloku qırmaq
+                        scene.remove(obj);
+                        collidableObjects.splice(collidableObjects.indexOf(obj), 1);
+                        logToChat(activeBlockType === 4 && swordVisualMesh.visible ? "⚔️ Qılıncla blok parçalandı!" : "🧱 Blok əllə qırıldı.");
                     }
+                }
+            } 
+            // SAĞ KLİK: Blok Qoymaq
+            else if (e.button === 2) {
+                if (intersects.length > 0 && intersects[0].distance < 5 && activeBlockType !== 4) {
+                    let blockColors = { 1: 0x7f8c8d, 2: 0x8a5a36, 3: 0xd35400 };
+                    let bMat = new THREE.MeshLambertMaterial({ color: blockColors[activeBlockType] });
+                    let newB = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), bMat);
+                    
+                    newB.position.copy(intersects[0].object.position).add(intersects[0].face.normal);
+                    scene.add(newB);
+                    collidableObjects.push(newB);
                 }
             }
         });
 
-        // 6. OYUNUN ƏSAS DÖVRÜ (Game Loop & Qravitasiya)
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // 6. QRAVİTASİYA VƏ OYUN DÖVRÜ (GAME LOOP)
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
 
-            // Qravitasiya Hesablanması (Düşmə mexanizmi)
-            player.yVelocity += player.grec * delta;
-            camera.position.y += player.yVelocity * delta;
+            // Qravitasiya hesablanması
+            player.yVelocity += player.gravity * delta;
+            player.position.y += player.yVelocity * delta;
 
-            // Yerdə dayanma yoxlanışı (Zəmin səviyyəsi y = 1.8)
-            if (camera.position.y <= player.height) {
-                camera.position.y = player.height;
+            if (player.position.y <= 0) {
+                player.position.y = 0;
                 player.yVelocity = 0;
                 player.canJump = true;
             }
 
-            // Kamera istiqaməti
-            const target = new THREE.Vector3(
-                Math.sin(yaw) * Math.cos(pitch),
-                Math.sin(pitch),
-                Math.cos(yaw) * Math.cos(pitch)
-            );
-            camera.lookAt(camera.position.clone().add(target));
-
-            // WASD Hərəkəti
+            // WASD hərəkət istiqaməti
             const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)).normalize();
             const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0,1,0)).normalize();
             const speed = player.speed * delta;
 
-            if (moveForward) camera.position.addScaledVector(forward, speed);
-            if (moveBackward) camera.position.addScaledVector(forward, -speed);
-            if (moveLeft) camera.position.addScaledVector(right, speed);
-            if (moveRight) camera.position.addScaledVector(right, -speed);
+            if (moveForward) player.position.addScaledVector(forward, speed);
+            if (moveBackward) player.position.addScaledVector(forward, -speed);
+            if (moveLeft) player.position.addScaledVector(right, speed);
+            if (moveRight) player.position.addScaledVector(right, -speed);
+
+            // 3D Xarakterimizin (Player Modelinin) yerini yeniləyirik
+            playerGroup.position.copy(player.position);
+            playerGroup.rotation.y = yaw; // Xarakter baxdığımız tərəfə dönsün
+
+            // KAMERA REJİMLƏRİNİN İDARƏSİ (F5 FUNKSİYASI)
+            if (cameraMode === 0) {
+                // 1-ci Şəxs: Kamera düz oyunçunun gözünün içində olur
+                camera.position.set(player.position.x, player.position.y + player.height, player.position.z);
+                const target = new THREE.Vector3(
+                    Math.sin(yaw) * Math.cos(pitch),
+                    Math.sin(pitch),
+                    Math.cos(yaw) * Math.cos(pitch)
+                );
+                camera.lookAt(camera.position.clone().add(target));
+                headMesh.visible = false; // Öz başımızı görməyək deyə gizlədirik
+            } else {
+                // 3-cü Şəxs: Kamera oyunçunun arxasında və bir az yuxarıda yerləşir
+                headMesh.visible = true; // Xarakter tam görünsün
+                let offset = new THREE.Vector3(-Math.sin(yaw) * 4, 2.5, -Math.cos(yaw) * 4);
+                camera.position.copy(player.position).add(offset);
+                camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1, 0)));
+            }
 
             renderer.render(scene, camera);
         }
