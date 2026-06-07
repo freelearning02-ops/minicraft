@@ -2,7 +2,7 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <title>Minecraft Survival Edition</title>
+    <title>Minecraft Survival - Tapança və Sandıq Versiyası</title>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; user-select: none; }
         #canvas-container { width: 100vw; height: 100vh; display: block; }
@@ -14,44 +14,51 @@
         
         #chat { position: absolute; top: 20px; left: 20px; width: 340px; height: 140px; background: rgba(0,0,0,0.5); color: #a8ffb2; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; overflow-y: hidden; pointer-events: none; }
         
-        /* ❤️ 8 Ürək can paneli */
         #heart-container { position: absolute; top: 180px; left: 20px; display: flex; gap: 4px; pointer-events: none; z-index: 10; }
         .heart { font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
 
-        /* İnventar Ekranı (E düyməsi) */
-        #inventory-screen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: rgba(40, 40, 40, 0.95); border: 3px solid #555; border-radius: 10px; color: white; padding: 20px; box-shadow: 0 0 25px rgba(0,0,0,0.8); z-index: 20; }
+        /* İnventar və Sandıq Ekranları */
+        .ui-screen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 420px; background: rgba(30, 30, 30, 0.95); border: 3px solid #555; border-radius: 10px; color: white; padding: 20px; box-shadow: 0 0 25px rgba(0,0,0,0.8); z-index: 20; }
         .inv-title { text-align: center; margin-top: 0; color: #f1c40f; font-size: 18px; border-bottom: 2px solid #555; padding-bottom: 10px; }
-        .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
-        .inv-item { background: #1e1e1e; border: 2px solid #444; padding: 10px; text-align: center; border-radius: 6px; cursor: pointer; }
-        .inv-item:hover { border-color: #f1c40f; background: #2a2a2a; }
-        .inv-item .icon { font-size: 24px; display: block; }
-        .inv-item .count { font-size: 11px; color: #aaa; }
+        .inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .inv-item { background: #222; border: 2px solid #444; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .inv-item:hover { border-color: #f1c40f; background: #2d2d2d; }
+        .inv-item .icon { font-size: 26px; display: block; margin-bottom: 4px; }
+        .inv-item .count { font-size: 12px; color: #aaa; margin-top: 4px; }
         
-        /* Hotbar */
         #hotbar { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(20, 20, 20, 0.85); padding: 6px; border-radius: 8px; border: 2px solid #555; box-shadow: 0 8px 20px rgba(0,0,0,0.7); pointer-events: none; }
         .slot { width: 55px; height: 55px; margin: 0 4px; border: 3px solid #3a3a3a; background: #222; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-size: 10px; font-weight: bold; position: relative; }
         .slot.active { border-color: #f1c40f; background: #333; box-shadow: 0 0 12px #f1c40f; }
         .slot .key-num { position: absolute; top: 2px; left: 4px; color: #888; font-size: 9px; }
-        .slot .icon { font-size: 22px; }
+        .slot .icon { font-size: 20px; }
 
         #armor-status { position: absolute; bottom: 85px; left: 20px; background: rgba(0,0,0,0.6); color: white; padding: 10px; border-radius: 6px; font-size: 13px; pointer-events: none; }
         #instructions { position: absolute; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; pointer-events: none; text-align: center; }
+        #ammo-display { position: absolute; bottom: 155px; left: 20px; background: rgba(211, 84, 0, 0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: 14px; font-weight: bold; display: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
     <div id="crosshair"></div>
-    <div id="chat"><div>[Sistem] Zombilərdən qorunun! Sandıqları tapıb qılıncı götürün!</div></div>
+    <div id="chat"><div>[Sistem] Sandığa baxıb 'E' basaraq açın! Tapança və yeni əşyalar əlavə olundu.</div></div>
     
     <div id="heart-container"></div>
-    
     <div id="armor-status">🛡️ Zireh: Yoxdur</div>
+    <div id="ammo-display">🔫 Güllə: 0</div>
 
-    <div id="inventory-screen">
-        <h3 class="inv-title">🎒 Çantası</h3>
+    <!-- 🎒 Oyunçunun Öz Çantası -->
+    <div id="inventory-screen" class="ui-screen">
+        <h3 class="inv-title">🎒 Sənin Çantan</h3>
         <div class="inv-grid" id="inv-grid-element"></div>
-        <p style="text-align:center; margin-bottom:0;"><button onclick="toggleInventory()" style="background:#e74c3c; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Bağla (E)</button></p>
+        <p style="text-align:center; margin-top:15px;"><button onclick="toggleInventory()" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">Bağla (E)</button></p>
+    </div>
+
+    <!-- 🧰 Sandığın Çantası Ekranı -->
+    <div id="chest-screen" class="ui-screen">
+        <h3 class="inv-title">🧰 Sandığın İçi (Götürmək üçün kliklə)</h3>
+        <div class="inv-grid" id="chest-grid-element"></div>
+        <p style="text-align:center; margin-top:15px;"><button onclick="closeChestInventory()" style="background:#27ae60; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">Yadda Saxla və Çıx (E)</button></p>
     </div>
     
     <div id="hotbar">
@@ -59,87 +66,99 @@
         <div class="slot" id="slot-2"><span class="key-num">2</span><span class="icon">🪵</span><span>Taxta</span></div>
         <div class="slot" id="slot-3"><span class="key-num">3</span><span class="icon">🟥</span><span>Kərpic</span></div>
         <div class="slot" id="slot-4"><span class="key-num">4</span><span class="icon">🥊</span><span>Əl</span></div>
+        <div class="slot" id="slot-5" style="display:none;"><span class="key-num">5</span><span class="icon">🔫</span><span>Silah</span></div>
     </div>
 
     <div id="instructions">
-        <strong>WASD</strong>: Hərəkət | <strong>SPACE</strong>: Tullanmaq | <strong>E</strong>: İnventar | <strong>C</strong>: Kamera Dəyiş | <strong>Sol Klik</strong>: Qır/Zombiyə Vur
+        <strong>WASD</strong>: Hərəkət | <strong>SPACE</strong>: Tullanmaq | <strong>E</strong>: Çanta / Sandıq Aç | <strong>1-5</strong>: Slot seçimi | <strong>Sol Klik</strong>: Atəş/Qır
     </div>
 
     <div id="canvas-container"></div>
 
     <script>
-        // 1. SƏHNƏ AYARLARI
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x5c93c4); // Bir az tünd göy üzü (Təhlükəli hava)
-        scene.fog = new THREE.FogExp2(0x5c93c4, 0.03);
+        scene.background = new THREE.Color(0x6eb5e5);
+        scene.fog = new THREE.FogExp2(0x6eb5e5, 0.025);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.85);
         sunLight.position.set(20, 50, 10);
         scene.add(sunLight);
 
-        // 2. OYUNÇU STATLARI (8 Can = 8 Ürək)
         let player = {
-            height: 1.8, speed: 7, yVelocity: 0, gravity: -13.0, jumpForce: 5.5, canJump: true,
+            height: 1.8, speed: 6, yVelocity: 0, gravity: -14.0, jumpForce: 5.8, canJump: true,
             position: new THREE.Vector3(0, 0, 12),
-            inventory: { sword: 0, apple: 0, armor: 0 },
+            inventory: { sword: 0, apple: 0, armor: 0, pistol: 0, ammo: 0, gold: 0, bread: 0 },
             isArmorEquipped: false,
             maxHealth: 8, health: 8,
-            hasSwordInHand: false
+            hasSwordInHand: false,
+            hasPistolInHand: false,
+            radius: 0.35
         };
 
-        let cameraMode = 0; // 0 = 1-ci şəxs, 1 = 3-cü şəxs
-        let mobDamageCooldown = 0; // Mobların ard-arda sürətlə vurmasının qarşısını almaq üçün
+        let cameraMode = 0; 
+        let mobDamageCooldown = 0; 
+        let openChestRef = null; // Hal-hazırda baxılan sandıq
 
-        // Ürəkləri ekranda göstərmək üçün funksiya
         function updateHeartsUI() {
             const container = document.getElementById('heart-container');
             container.innerHTML = '';
+            let fullHearts = Math.floor(player.health);
+            let hasHalf = (player.health % 1 !== 0);
+            
             for(let i=0; i<player.maxHealth; i++) {
                 let span = document.createElement('span');
                 span.className = 'heart';
-                span.innerText = i < player.health ? '❤️' : '🖤'; // Can gedəndə qara ürək olur
+                if(i < fullHearts) span.innerText = '❤️';
+                else if(i === fullHearts && hasHalf) span.innerText = '💔';
+                else span.innerText = '🖤';
                 container.appendChild(span);
             }
         }
         updateHeartsUI();
 
-        // Xarakter modeli (3-cü şəxs üçün)
         const playerGroup = new THREE.Group();
-        const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.4), new THREE.MeshLambertMaterial({ color: 0x3498db }));
+        const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.2, 0.3), new THREE.MeshLambertMaterial({ color: 0x3498db }));
         bodyMesh.position.y = 0.6; playerGroup.add(bodyMesh);
         const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshLambertMaterial({ color: 0xffdbac }));
         headMesh.position.y = 1.4; playerGroup.add(headMesh);
         
-        // 3-cü şəxsdə görünən qılınc
         const tpSword = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), new THREE.MeshLambertMaterial({ color: 0x00ffff }));
         tpSword.position.set(0.4, 0.6, -0.3); tpSword.rotation.x = Math.PI / 4;
         tpSword.visible = false; playerGroup.add(tpSword);
         scene.add(playerGroup);
 
-        // 1-ci şəxs (Ekranda əldə görünən) Almaz Qılınc
+        // 🔫 Birinci şəxs görünüşündə Tapança modeli
+        const fpPistolGroup = new THREE.Group();
+        const pistolMain = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.3), new THREE.MeshLambertMaterial({ color: 0x333333 }));
+        pistolMain.position.set(0.25, -0.25, -0.4);
+        const pistolGrip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, 0.06), new THREE.MeshLambertMaterial({ color: 0x5a3d28 }));
+        pistolGrip.position.set(0.25, -0.35, -0.3);
+        fpPistolGroup.add(pistolMain, pistolGrip);
+        camera.add(fpPistolGroup);
+        scene.add(camera);
+        fpPistolGroup.visible = false;
+
         const fpSwordGroup = new THREE.Group();
         const fpSwordMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.08), new THREE.MeshLambertMaterial({ color: 0x00ffff }));
-        fpSwordMesh.position.set(0.3, -0.3, -0.5); // Ekranın sağ aşağısına yerləşdiririk
+        fpSwordMesh.position.set(0.3, -0.3, -0.5); 
         fpSwordMesh.rotation.set(Math.PI / 3, 0, -Math.PI / 6);
         fpSwordGroup.add(fpSwordMesh);
-        camera.add(fpSwordGroup); // Qılıncı kameraya bağlayırıq ki, bizimlə hərəkət etsin
-        scene.add(camera);
+        camera.add(fpSwordGroup);
         fpSwordGroup.visible = false;
 
-        // Zəmin
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x3b5921 }));
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x476b26 }));
         ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
         const collidableObjects = [];
         const chests = [];
-        const mobs = []; // Zombilərin listi
+        const mobs = []; 
         let activeBlockType = 1;
 
         function logToChat(text) {
@@ -148,70 +167,133 @@
             if(chat.children.length > 5) chat.removeChild(chat.children[0]);
         }
 
-        // 3. EVLƏR VƏ SANDIQLARIN TİKİLMƏSİ
-        function evYarat(xPos, zPos, color) {
+        // Evlər və İçindəki xüsusi sandıq inventarları
+        function evYarat(xPos, zPos, color, chestItems) {
             const geo = new THREE.BoxGeometry(1, 1, 1);
             for(let x=0; x<5; x++) {
                 for(let y=0; y<4; y++) {
                     for(let z=0; z<5; z++) {
                         if((x===0 || x===4 || z===0 || z===4) || y===3) {
-                            if(z === 4 && x === 2 && (y === 0 || y === 1)) continue; // Qapı
+                            if(z === 4 && x === 2 && (y === 0 || y === 1)) continue; 
                             let b = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: y===3 ? 0x5a3d28 : color }));
                             b.position.set(xPos + x, y + 0.5, zPos + z); scene.add(b); collidableObjects.push(b);
                         }
                     }
                 }
             }
+            
             let chest = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0xd35400 }));
-            chest.position.set(xPos + 2, 0.5, zPos + 2); chest.isChest = true; chest.opened = false;
+            chest.position.set(xPos + 2, 0.5, zPos + 2); 
+            chest.isChest = true;
+            // 🎁 Sandığın xüsusi içi (Təzə əşyalar və Tapança buraya qoyulur)
+            chest.items = { ...chestItems }; 
             scene.add(chest); chests.push(chest); collidableObjects.push(chest);
         }
-        evYarat(-6, -6, 0x7f8c8d);
-        evYarat(4, -8, 0xd2b48c);
+        
+        // 1-ci Ev: İçində Tapança və güllələr olan sandıq
+        evYarat(-6, -6, 0x7f8c8d, { pistol: 1, ammo: 15, bread: 3, gold: 5 });
+        // 2-ci Ev: Əlavə təzə sursat sandığı
+        evYarat(4, -8, 0xd2b48c, { ammo: 20, apple: 2, armor: 1, gold: 8 });
 
-        // 4. 👾 MOBLARIN (ZOMBİLƏRİN) YARADILMASI
         function zombieYarat(x, z) {
             const zombieGroup = new THREE.Group();
-            // Zombi bədəni (Yaşıl-göy rəngdə)
             const zBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.4), new THREE.MeshLambertMaterial({ color: 0x27ae60 }));
             zBody.position.y = 0.6; zombieGroup.add(zBody);
             const zHead = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshLambertMaterial({ color: 0x1e824c }));
             zHead.position.y = 1.4; zombieGroup.add(zHead);
-            
             zombieGroup.position.set(x, 0, z);
-            zombieGroup.isAlive = true;
-            zombieGroup.health = 3; // Zombilər 3 qılınc zərbəsinə ölür
-            scene.add(zombieGroup);
-            mobs.push(zombieGroup);
+            zombieGroup.isAlive = true; zombieGroup.health = 3; 
+            scene.add(zombieGroup); mobs.push(zombieGroup);
         }
-        // Şəhərə 3 dənə zombi əlavə edirik
         zombieYarat(-2, -15);
         zombieYarat(6, -16);
         zombieYarat(0, -5);
 
-        // 5. İDARI VƏ İNVENTAR
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        let yaw = 0, pitch = 0; let isInventoryOpen = false;
+        let yaw = 0, pitch = 0; 
+        let isInventoryOpen = false;
+        let isChestOpen = false;
 
-        document.body.addEventListener('click', () => { if(!isInventoryOpen) document.body.requestPointerLock(); });
+        document.body.addEventListener('click', () => { 
+            if(!isInventoryOpen && !isChestOpen) document.body.requestPointerLock(); 
+        });
 
         document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === document.body && !isInventoryOpen) {
+            if (document.pointerLockElement === document.body && !isInventoryOpen && !isChestOpen) {
                 yaw -= e.movementX * 0.0025; pitch -= e.movementY * 0.0025;
                 pitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, pitch));
             }
         });
 
+        // 🎒 Oyunçunun İnventar Menusu
         function toggleInventory() {
+            if(isChestOpen) return;
             isInventoryOpen = !isInventoryOpen;
             const screen = document.getElementById('inventory-screen');
             if(isInventoryOpen) { document.exitPointerLock(); screen.style.display = 'block'; yenileInventoryUI(); }
             else { screen.style.display = 'none'; document.body.requestPointerLock(); }
         }
 
+        // 🧰 Sandığın İnventar Menusu
+        function openChestInventory(chestObj) {
+            openChestRef = chestObj;
+            isChestOpen = true;
+            document.exitPointerLock();
+            document.getElementById('chest-screen').style.display = 'block';
+            yenileChestUI();
+        }
+
+        function closeChestInventory() {
+            isChestOpen = false;
+            openChestRef = null;
+            document.getElementById('chest-screen').style.display = 'none';
+            document.body.requestPointerLock();
+        }
+
+        function yenileChestUI() {
+            const grid = document.getElementById('chest-grid-element'); grid.innerHTML = '';
+            if(!openChestRef) return;
+
+            const itemsData = [
+                { id: 'pistol', name: 'Tapança', icon: '🔫' },
+                { id: 'ammo', name: 'Güllə', icon: '⚡' },
+                { id: 'bread', name: 'Təzə Çörək', icon: '🍞' },
+                { id: 'gold', name: 'Qızıl Külçə', icon: '🪙' },
+                { id: 'apple', name: 'Sehrli Alma', icon: '🍎' },
+                { id: 'armor', name: 'Almaz Zireh', icon: '👕' }
+            ];
+
+            let empty = true;
+            itemsData.forEach(item => {
+                let count = openChestRef.items[item.id] || 0;
+                if(count > 0) {
+                    empty = false;
+                    let div = document.createElement('div'); div.className = 'inv-item';
+                    div.innerHTML = `<span class="icon">${item.icon}</span><b>${item.name}</b><div class="count">Sandıqda: ${count}</div>`;
+                    div.onclick = () => chestItemGotur(item.id);
+                    grid.appendChild(div);
+                }
+            });
+
+            if(empty) grid.innerHTML = '<p style="grid-column:1/4; text-align:center; color:#ff8888;">Sandıq tamamilə boşdur!</p>';
+        }
+
+        function chestItemGotur(itemId) {
+            if(openChestRef && openChestRef.items[itemId] > 0) {
+                openChestRef.items[itemId]--;
+                player.inventory[itemId] = (player.inventory[itemId] || 0) + 1;
+                logToChat(`📥 Sandıqdan götürüldü: ${itemId.toUpperCase()}`);
+                yenileChestUI();
+            }
+        }
+
         function yenileInventoryUI() {
             const grid = document.getElementById('inv-grid-element'); grid.innerHTML = '';
             const items = [
+                { id: 'pistol', name: 'Tapança', icon: '🔫', count: player.inventory.pistol },
+                { id: 'ammo', name: 'Güllə', icon: '⚡', count: player.inventory.ammo },
+                { id: 'bread', name: 'Təzə Çörək', icon: '🍞', count: player.inventory.bread },
+                { id: 'gold', name: 'Qızıl Külçə', icon: '🪙', count: player.inventory.gold },
                 { id: 'sword', name: 'Almaz Qılınc', icon: '⚔️', count: player.inventory.sword },
                 { id: 'apple', name: 'Sehrli Alma', icon: '🍎', count: player.inventory.apple },
                 { id: 'armor', name: 'Almaz Zireh', icon: '👕', count: player.inventory.armor }
@@ -219,57 +301,85 @@
             items.forEach(item => {
                 if(item.count > 0) {
                     let div = document.createElement('div'); div.className = 'inv-item';
-                    div.innerHTML = `<span class="icon">${item.icon}</span><b>${item.name}</b><div class="count">Say: ${item.count}</div>`;
+                    div.innerHTML = `<span class="icon">${item.icon}</span><b>${item.name}</b><div class="count">Səndə: ${item.count}</div>`;
                     div.onclick = () => itemIstifadeEt(item.id); grid.appendChild(div);
                 }
             });
-            if(grid.innerHTML === '') grid.innerHTML = '<p style="grid-column:1/5; text-align:center; color:#888;">Çantanız boşdur.</p>';
+            if(grid.innerHTML === '') grid.innerHTML = '<p style="grid-column:1/4; text-align:center; color:#888;">Çantanız boşdur.</p>';
         }
 
         function itemIstifadeEt(itemId) {
-            if(itemId === 'apple') {
+            if(itemId === 'apple' || itemId === 'bread') {
                 if(player.health < player.maxHealth) {
-                    player.inventory.apple--; player.health = Math.min(player.maxHealth, player.health + 2);
-                    updateHeartsUI(); logToChat("🍎 Almanı yedin, 2 ürək canın bərpa olundu!");
-                } else { logToChat("Canın onsuz da doludur!"); }
+                    player.inventory[itemId]--; 
+                    player.health = Math.min(player.maxHealth, player.health + (itemId === 'apple' ? 2 : 1));
+                    updateHeartsUI(); logToChat(`🍞 Yemək yeyildi! Canınız artdı.`);
+                } else { logToChat("Canınız tamdır!"); }
             } 
             else if(itemId === 'armor') {
                 player.inventory.armor--; player.isArmorEquipped = true;
                 bodyMesh.material.color.setHex(0x00ffff);
                 document.getElementById('armor-status').innerText = "🛡️ Zireh: Almaz Köynək (Aktiv)";
-                logToChat("👕 Zireh geyinildi! Artıq moblar sənə yarıbayarı az zərər vuracaq.");
+                logToChat("👕 Zireh geyinildi!");
             }
             else if(itemId === 'sword') {
-                player.inventory.sword--; player.hasSwordInHand = true;
-                tpSword.visible = true; // 3-cü şəxsdə qılınc
-                fpSwordGroup.visible = true; // 1-ci şəxsdə (Ekranda) qılınc
+                player.hasSwordInHand = true; player.hasPistolInHand = false;
                 document.getElementById('slot-4').innerHTML = '<span class="key-num">4</span><span class="icon">⚔️</span><span>Qılınc</span>';
-                activeBlockType = 4;
-                document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
-                document.getElementById('slot-4').classList.add('active');
-                logToChat("⚔️ Almaz Qılınc ələ alındı! Zombiləri məhv edə bilərsən.");
+                slotSec(4); logToChat("⚔️ Qılınc ələ alındı!");
+            }
+            else if(itemId === 'pistol') {
+                player.hasPistolInHand = true; player.hasSwordInHand = false;
+                document.getElementById('slot-5').style.display = 'flex'; // 5-ci slotu açırıq
+                slotSec(5); logToChat("🔫 Tapança ələ alındı! Atəş açmaq üçün klikləyin.");
             }
             yenileInventoryUI();
+            toggleInventory();
         }
 
+        function slotSec(num) {
+            activeBlockType = num;
+            document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
+            document.getElementById(`slot-${num}`).classList.add('active');
+            
+            // Əldəki silah modellərini idarə et
+            if(num === 4 && player.hasSwordInHand) { fpSwordGroup.visible = true; fpPistolGroup.visible = false; }
+            else if(num === 5 && player.hasPistolInHand) { 
+                fpSwordGroup.visible = false; fpPistolGroup.visible = true;
+                document.getElementById('ammo-display').style.display = 'block';
+                document.getElementById('ammo-display').innerText = `🔫 Güllə: ${player.inventory.ammo}`;
+            } else {
+                fpSwordGroup.visible = false; fpPistolGroup.visible = false;
+                document.getElementById('ammo-display').style.display = 'none';
+            }
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const screenCenter = new THREE.Vector2(0, 0);
+
         document.addEventListener('keydown', (e) => {
-            if(e.code === 'KeyE') { e.preventDefault(); toggleInventory(); }
-            if(isInventoryOpen) return;
+            if(e.code === 'KeyE') { 
+                e.preventDefault();
+                if(isChestOpen) { closeChestInventory(); return; }
+                
+                // 🧰 Əgər sandığa baxaraq E basırsa Sandığı aç
+                raycaster.setFromCamera(screenCenter, camera);
+                const chestIntersects = raycaster.intersectObjects(chests);
+                if (chestIntersects.length > 0 && chestIntersects[0].distance < 4.0) {
+                    openChestInventory(chestIntersects[0].object);
+                    return;
+                }
+                
+                toggleInventory(); 
+            }
+            if(isInventoryOpen || isChestOpen) return;
 
             if(e.code === 'KeyW') moveForward = true; if(e.code === 'KeyS') moveBackward = true;
             if(e.code === 'KeyA') moveLeft = true; if(e.code === 'KeyD') moveRight = true;
             if(e.code === 'Space' && player.canJump) { player.yVelocity = player.jumpForce; player.canJump = false; }
             
-            // 🎥 C DÜYMƏSİ İLƏ KAMERA DƏYİŞMƏK
-            if(e.code === 'KeyC') {
-                cameraMode = (cameraMode + 1) % 2;
-                logToChat(cameraMode === 1 ? "🎥 Xarici kameraya keçildi (C)." : "🎥 Göz kamerasından baxılır (C).");
-            }
-
-            if(e.key >= '1' && e.key <= '4') {
-                activeBlockType = parseInt(e.key);
-                document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
-                document.getElementById(`slot-${e.key}`).classList.add('active');
+            if(e.key >= '1' && e.key <= '5') {
+                if(e.key === '5' && !player.hasPistolInHand) return;
+                slotSec(parseInt(e.key));
             }
         });
 
@@ -278,61 +388,63 @@
             if(e.code === 'KeyA') moveLeft = false; if(e.code === 'KeyD') moveRight = false;
         });
 
-        // 6. SOL KLİK HÜCUMU VƏ HEYVAN/ZOMBİ VURMA
         document.addEventListener('mousedown', (e) => {
-            if (document.pointerLockElement !== document.body || isInventoryOpen) return;
-            
+            if (document.pointerLockElement !== document.body || isInventoryOpen || isChestOpen) return;
             raycaster.setFromCamera(screenCenter, camera);
 
-            if (e.button === 0) { // Sol Klik
-                // Qılınc Sallama Animasiyası (Həm 1-ci, həm 3-cü şəxs üçün)
-                if(activeBlockType === 4 && player.hasSwordInHand) {
-                    fpSwordMesh.position.z = -0.3; fpSwordMesh.rotation.z = Math.PI / 4; // 1st person swing
-                    tpSword.rotation.z = Math.PI / 3; // 3rd person swing
-                    setTimeout(() => { 
-                        fpSwordMesh.position.z = -0.5; fpSwordMesh.rotation.set(Math.PI / 3, 0, -Math.PI / 6);
-                        tpSword.rotation.z = 0;
-                    }, 120);
-                }
-
-                // Önümüzdə zombi varmı deyə yoxlayırıq
-                const zombiVuruldumu = raycaster.intersectObjects(mobs.filter(m => m.isAlive), true);
-                if(zombiVuruldumu.length > 0 && zombiVuruldumu[0].distance < 4.5) {
-                    let hitZombie = zombiVuruldumu[0].object.parent; // Group-u tapırıq
-                    if(!hitZombie) hitZombie = zombiVuruldumu[0].object;
+            if (e.button === 0) { 
+                // 🔫 TAPANÇA İLƏ ATƏŞ AÇMA MEXANİZMİ (Slot 5)
+                if(activeBlockType === 5 && player.hasPistolInHand) {
+                    if(player.inventory.ammo <= 0) { logToChat("❌ Güllə bitdi! Sandıqlardan tapın."); return; }
                     
-                    let damage = (activeBlockType === 4 && player.hasSwordInHand) ? 1.5 : 0.5; // Qılınc çox vurur
-                    hitZombie.health -= damage;
-                    logToChat(`⚔️ Zombiyə zərbə endirildi! Canı: ${Math.max(0, hitZombie.health)}`);
+                    player.inventory.ammo--;
+                    document.getElementById('ammo-display').innerText = `🔫 Güllə: ${player.inventory.ammo}`;
                     
-                    // Geri itələmə effekti
-                    hitZombie.position.x -= Math.sin(yaw) * 1.2;
-                    hitZombie.position.z -= Math.cos(yaw) * 1.2;
+                    // Geri tepme animasiyası
+                    fpPistolGroup.position.z = 0.1;
+                    setTimeout(() => fpPistolGroup.position.z = 0, 80);
 
-                    if(hitZombie.health <= 0) {
-                        hitZombie.isAlive = false; scene.remove(hitZombie);
-                        logToChat("💀 Bir zombi məhv edildi!");
+                    // Atəş xəttindəki zombini tap
+                    const hitMobs = raycaster.intersectObjects(mobs.filter(m => m.isAlive), true);
+                    if(hitMobs.length > 0 && hitMobs[0].distance < 20) { // Menzi 20 metr
+                        let zombie = hitMobs[0].object.parent || hitMobs[0].object;
+                        zombie.health -= 1.5; // Tapança ziyanı
+                        logToChat(`🎯 Zombi güllələndi! Qalan canı: ${Math.max(0, zombie.health)}`);
+                        if(zombie.health <= 0) { zombie.isAlive = false; scene.remove(zombie); logToChat("💀 Zombi uzaqdan vuruldu!"); }
+                    } else {
+                        logToChat("💨 Boşa atəş açıldı.");
                     }
-                    return; // Zombiyə vurmuşuqsa blok qırma işləməsin
+                    return;
                 }
 
-                // Əgər zombi yoxdursa blok qırırıq və ya sandıq açırıq
+                // Qılınc yelləmə animasiyası
+                if(activeBlockType === 4 && player.hasSwordInHand) {
+                    fpSwordMesh.position.z = -0.3; fpSwordMesh.rotation.z = Math.PI / 4; 
+                    setTimeout(() => { fpSwordMesh.position.z = -0.5; fpSwordMesh.rotation.set(Math.PI / 3, 0, -Math.PI / 6); }, 120);
+                }
+
+                // Yaxın döyüş zombi vuruşu
+                const zombiVuruldumu = raycaster.intersectObjects(mobs.filter(m => m.isAlive), true);
+                if(zombiVuruldumu.length > 0 && zombiVuruldumu[0].distance < 4.0) {
+                    let hitZombie = zombiVuruldumu[0].object.parent || zombiVuruldumu[0].object;
+                    let damage = (activeBlockType === 4 && player.hasSwordInHand) ? 1.5 : 0.5;
+                    hitZombie.health -= damage;
+                    logToChat(`⚔️ Zombiyə yaxından vuruldu! Canı: ${Math.max(0, hitZombie.health)}`);
+                    if(hitZombie.health <= 0) { hitZombie.isAlive = false; scene.remove(hitZombie); logToChat("💀 Zombi öldürüldü!"); }
+                    return; 
+                }
+
+                // Blok qırma
                 const intersects = raycaster.intersectObjects(collidableObjects);
                 if (intersects.length > 0 && intersects[0].distance < 5) {
                     const obj = intersects[0].object;
-                    if (obj.isChest && !obj.opened) {
-                        obj.opened = true; obj.material.color.setHex(0x27ae60);
-                        player.inventory.sword += 1; player.inventory.apple += 2; player.inventory.armor += 1;
-                        logToChat("🧰 Sandıqdan: [1x ⚔️ Qılınc], [2x 🍎 Alma], [1x 👕 Zireh] çıxdı! 'E' ilə çantanı açın.");
-                    } else if(!obj.isChest) {
-                        scene.remove(obj); collidableObjects.splice(collidableObjects.indexOf(obj), 1);
-                    }
+                    if(!obj.isChest) { scene.remove(obj); collidableObjects.splice(collidableObjects.indexOf(obj), 1); }
                 }
             } 
             // Sağ Klik: Blok Qoyma
             else if (e.button === 2) {
                 const intersects = raycaster.intersectObjects(collidableObjects);
-                if (intersects.length > 0 && intersects[0].distance < 5 && activeBlockType !== 4) {
+                if (intersects.length > 0 && intersects[0].distance < 5 && activeBlockType < 4) {
                     let colors = { 1: 0x7f8c8d, 2: 0x8a5a36, 3: 0xd35400 };
                     let newB = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshLambertMaterial({ color: colors[activeBlockType] }));
                     newB.position.copy(intersects[0].object.position).add(intersects[0].face.normal);
@@ -343,84 +455,75 @@
 
         document.addEventListener('contextmenu', e => e.preventDefault());
 
-        // 7. ZOMBİ SÜNİ INTELLEKTİ VƏ CANALMA MEXANİZMİ (GAME LOOP)
+        // Divarlardan və bloklardan keçməmə alqoritmi
+        function checkCollision(oldPos, newPos) {
+            if(newPos.y < 0) return;
+            for (let i = 0; i < collidableObjects.length; i++) {
+                let block = collidableObjects[i];
+                let bX = block.position.x; let bY = block.position.y; let bZ = block.position.z;
+                let insideX = (newPos.x + player.radius > bX - 0.5) && (newPos.x - player.radius < bX + 0.5);
+                let insideZ = (newPos.z + player.radius > bZ - 0.5) && (newPos.z - player.radius < bZ + 0.5);
+                let insideY = (newPos.y < bY + 0.5) && (newPos.y + player.height > bY - 0.5);
+
+                if (insideX && insideZ && insideY) {
+                    if (oldPos.y >= bY + 0.5 && player.yVelocity <= 0) {
+                        newPos.y = bY + 0.5; player.yVelocity = 0; player.canJump = true; return;
+                    }
+                    newPos.x = oldPos.x; newPos.z = oldPos.z;
+                }
+            }
+        }
+
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
+            let oldPosition = player.position.clone();
 
-            // Qravitasiya
-            player.yVelocity += player.gravity * delta; player.position.y += player.yVelocity * delta;
-            if (player.position.y <= 0) { player.position.y = 0; player.yVelocity = 0; player.canJump = true; }
+            player.yVelocity += player.gravity * delta;
+            let newPos = player.position.clone(); newPos.y += player.yVelocity * delta;
 
-            // Hərəkət
+            if (newPos.y <= 0) { newPos.y = 0; player.yVelocity = 0; player.canJump = true; }
+
             const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)).normalize();
             const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0,1,0)).normalize();
             const speed = player.speed * delta;
-            if (moveForward) player.position.addScaledVector(forward, speed);
-            if (moveBackward) player.position.addScaledVector(forward, -speed);
-            if (moveLeft) player.position.addScaledVector(right, speed);
-            if (moveRight) player.position.addScaledVector(right, -speed);
 
+            if (moveForward) newPos.addScaledVector(forward, speed);
+            if (moveBackward) newPos.addScaledVector(forward, -speed);
+            if (moveLeft) newPos.addScaledVector(right, speed);
+            if (moveRight) newPos.addScaledVector(right, -speed);
+
+            checkCollision(oldPosition, newPos);
+            player.position.copy(newPos);
             playerGroup.position.copy(player.position); playerGroup.rotation.y = yaw;
 
-            // Zombilərin Hərəkəti (Süni İntellekt)
+            // Zombi AI (Yavaş hərəkət, 0.5 Ziyan)
             if(mobDamageCooldown > 0) mobDamageCooldown -= delta;
-
             mobs.forEach(zombie => {
                 if(zombie.isAlive) {
-                    // Zombi oyunçuya doğru yönəlir
                     let yön = new THREE.Vector3().subVectors(player.position, zombie.position);
-                    let məsafe = yön.length();
-                    yön.y = 0; yön.normalize();
-                    
-                    // Əgər zombi yaxındadırsa bizi təqib edir (Ağıllı Süni İntellekt)
-                    if(məsafe < 15 && məsafe > 1.2) {
-                        zombie.position.addScaledVector(yön, 3.2 * delta); // Zombi sürəti
+                    let məsafe = yön.length(); yön.y = 0; yön.normalize();
+                    if(məsafe < 16 && məsafe > 1.1) {
+                        zombie.position.addScaledVector(yön, 1.4 * delta); 
                         zombie.lookAt(player.position.x, zombie.position.y, player.position.z);
                     }
-
-                    // 🥊 ZOMBİNİN OYUNÇUNU VURMASI (Can Azalması)
-                    if(məsafe <= 1.3 && mobDamageCooldown <= 0) {
-                        let ziyan = player.isArmorEquipped ? 1 : 2; // Zireh varsa az zərər vurur
-                        player.health -= ziyan;
-                        mobDamageCooldown = 1.2; // Hər 1.2 saniyədən bir vura bilsin
-                        updateHeartsUI();
-                        logToChat(`💥 Bir zombi sənə vurdu! -${ziyan} can.`);
-                        
-                        // Oyunçu geriyə fırlasın (Hit-knockback)
-                        player.position.x += yön.x * 0.8;
-                        player.position.z += yön.z * 0.8;
-
-                        // ÖLÜM YOXLANILMASI
+                    if(məsafe <= 1.2 && mobDamageCooldown <= 0) {
+                        player.health -= 0.5; mobDamageCooldown = 1.5; updateHeartsUI();
+                        logToChat(`💥 Zombi vurdu! -0.5 can.`);
                         if(player.health <= 0) {
-                            alert("❌ Öldünüz! Oyun yenidən başlayır.");
-                            player.health = 8; player.position.set(0,0,12);
-                            player.isArmorEquipped = false; player.hasSwordInHand = false;
-                            tpSword.visible = false; fpSwordGroup.visible = false;
-                            document.getElementById('armor-status').innerText = "🛡️ Zireh: Yoxdur";
-                            document.getElementById('slot-4').innerHTML = '<span class="key-num">4</span><span class="icon">🥊</span><span>Əl</span>';
-                            updateHeartsUI();
+                            alert("❌ Öldünüz! Oyun yenidən qurulur.");
+                            location.reload();
                         }
                     }
                 }
             });
 
-            // Kamera Rejimləri
-            if (cameraMode === 0) { // 1st Person
-                camera.position.set(player.position.x, player.position.y + player.height, player.position.z);
-                const target = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
-                camera.lookAt(camera.position.clone().add(target));
-                headMesh.visible = false;
-                if(player.hasSwordInHand && activeBlockType === 4) fpSwordGroup.visible = true;
-                else fpSwordGroup.visible = false;
-            } else { // 3rd Person
-                headMesh.visible = true; fpSwordGroup.visible = false;
-                let offset = new THREE.Vector3(-Math.sin(yaw) * 4, 2.5, -Math.cos(yaw) * 4);
-                camera.position.copy(player.position).add(offset);
-                camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 1, 0)));
-            }
+            // Kamera Görünüşü
+            camera.position.set(player.position.x, player.position.y + player.height, player.position.z);
+            const target = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+            camera.lookAt(camera.position.clone().add(target));
 
             renderer.render(scene, camera);
         }
