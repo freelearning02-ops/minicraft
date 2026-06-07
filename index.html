@@ -88,61 +88,60 @@
     </div>
 
     <div id="canvas-container"></div>
-    <div id="chat">Oyun başladı: Dünya random generasiya olundu.</div>
+
+
     <script>
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x6eb5e5);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 1. Zəmin
+        // 1. Zəmin (Düz dünya)
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshBasicMaterial({color: 0x228B22}));
         ground.rotation.x = -Math.PI / 2;
         scene.add(ground);
 
-        // 2. Obyekt funksiyaları (Köhnə mexanika)
-        function createHouse(x, z) {
-            const house = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial({color: 0x8B4513}));
-            house.position.set(x, 1, z);
-            scene.add(house);
+        // 2. Obyektlər (Evlər, Golem, Sandıq - Random Generasiya)
+        function createRandomObject(type, x, z) {
+            let color = type === 'house' ? 0x8B4513 : (type === 'golem' ? 0xFFFFFF : 0xFFD700);
+            let size = type === 'house' ? 2 : 1;
+            const obj = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), new THREE.MeshBasicMaterial({color: color}));
+            obj.position.set(x, size/2, z);
+            scene.add(obj);
         }
 
-        function createGolem(x, z) {
-            const golem = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 1), new THREE.MeshBasicMaterial({color: 0xFFFFFF}));
-            golem.position.set(x, 1.5, z);
-            scene.add(golem);
+        // Random yerləşdirmə
+        for(let i = 0; i < 20; i++) {
+            let x = (Math.random() - 0.5) * 100;
+            let z = (Math.random() - 0.5) * 100;
+            let type = Math.random() > 0.6 ? 'house' : 'golem';
+            createRandomObject(type, x, z);
         }
 
-        function createChest(x, z) {
-            const chest = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial({color: 0xFFD700}));
-            chest.position.set(x, 0.25, z);
-            scene.add(chest);
-        }
+        // 3. 300 Blok hündürlük və Qravitasiya sistemi
+        let playerY = 300; // Başlanğıc hündürlük
+        let velocity = 0;
+        const gravity = 0.5; // Düşmə sürəti
 
-        // 3. RANDOM SPAWN MEXANİKASI
-        function generateRandomWorld() {
-            for(let i = 0; i < 15; i++) {
-                let x = (Math.random() - 0.5) * 100;
-                let z = (Math.random() - 0.5) * 100;
-                
-                // Hər döngüdə təsadüfi obyekt seç
-                let rand = Math.random();
-                if(rand < 0.5) createHouse(x, z);
-                else if(rand < 0.8) createGolem(x, z);
-                else createChest(x, z);
-            }
-        }
-
-        generateRandomWorld();
-
-        camera.position.set(0, 5, 20);
-        camera.lookAt(0, 0, 0);
+        camera.position.set(0, playerY, 0);
 
         function animate() {
             requestAnimationFrame(animate);
+
+            // Qravitasiya mexanikası
+            if (playerY > 1) { // Yerə çatana qədər
+                velocity += gravity;
+                playerY -= velocity;
+            } else {
+                playerY = 1; // Yerdə dayan
+            }
+
+            camera.position.y = playerY;
             renderer.render(scene, camera);
         }
+        
         animate();
     </script>
 
