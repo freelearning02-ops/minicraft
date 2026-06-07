@@ -2,74 +2,123 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <title>Brauzer Minecraft Oyunu</title>
+    <title>Minecraft 3D Şəhər və Sandıqlar</title>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #1a1a1a; font-family: sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; display: block; }
-        #ui { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; color: white; pointer-events: none; text-align: center; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; background: white; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; }
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 24px; }
+        #ui { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 10px; color: white; pointer-events: none; text-align: center; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; transform: translate(-50%, -50%); pointer-events: none; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: white; }
+        #crosshair::before { top: 5px; left: 0; width: 12px; height: 2px; }
+        #crosshair::after { top: 0; left: 5px; width: 2px; height: 12px; }
+        #chat { position: absolute; top: 20px; left: 20px; width: 300px; height: 150px; background: rgba(0,0,0,0.4); color: #5cbf5c; padding: 10px; border-radius: 5px; font-family: monospace; overflow-y: hidden; pointer-events: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="loading">Dünya yüklənir...</div>
     <div id="crosshair"></div>
+    <div id="chat"><div>Sistem: Oyun başladı!</div></div>
     <div id="ui">
-        <strong>İdarəetmə:</strong> WASD - Hərəkət | Siçan - Ətrafa baxış (Kliklə) | Sol Klik - Blok Qır | Sağ Klik - Rəngli Blok Qoy
+        <strong>WASD</strong>: Gəzinti | <strong>SPACE</strong>: Hoppanmaq | <strong>Siçan</strong>: Baxış (Kliklə) <br>
+        <strong>Sandığa Sol Klik</strong>: Aç və İçindəkinə Bax
     </div>
     <div id="canvas-container"></div>
 
     <script>
-        // Oyun sahəsinin qurulması
+        // 1. SƏHNƏ VƏ KAMERA AYARLARI
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Göy üzü rəngi
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.05);
+        scene.background = new THREE.Color(0x7befb2); // Göy üzü rəngi
+        scene.fog = new THREE.FogExp2(0x7befb2, 0.03);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        // İşıqlandırma
+        // İşıqlar
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(10, 20, 15);
+        dirLight.position.set(20, 40, 20);
         scene.add(dirLight);
 
-        // Rəngbərəng bloklar üçün materiallar listi
-        const renkler = [0xff4757, 0x2ed573, 0x1e90ff, 0xffa502, 0x9b59b6, 0xf1c40f, 0xe74c3c];
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const blocks = [];
+        // 2. FİZİKA VƏ OYUNÇU AYARLARI
+        let player = {
+            height: 1.8,
+            speed: 6,
+            yVelocity: 0,
+            grec: -9.8, // Qravitasiya gücü
+            jumpForce: 4.5,
+            canJump: true
+        };
+        camera.position.set(0, player.height, 5);
 
-        // Rəngbərəng Dünya Yaradılması (Xəndəklər və təpələr)
-        for (let x = -10; x < 10; x++) {
-            for (let z = -10; z < 10; z++) {
-                // Sadə relyef (təpəçiklər) yaratmaq üçün sinusdan istifadə edirik
-                let height = Math.floor(Math.sin(x * 0.3) * 2 + Math.cos(z * 0.3) * 2);
-                for (let y = -3; y <= height; y++) {
-                    let rastgeleRenk = renkler[Math.floor(Math.random() * renkler.length)];
-                    let material = new THREE.MeshLambertMaterial({ color: rastgeleRenk });
-                    let cube = new THREE.Mesh(geometry, material);
-                    cube.position.set(x, y, z);
-                    scene.add(cube);
-                    blocks.push(cube);
-                }
-            }
+        // 3. DÜNYA, BALACA ŞƏHƏR VƏ SANDIQLARIN YARADILMASI
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const objects = [];
+        const chests = [];
+
+        // Yaşıl Yer (Zəmin)
+        const groundGeo = new THREE.PlaneGeometry(100, 100);
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x557a2b });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        scene.add(ground);
+
+        function logToChat(text) {
+            const chat = document.getElementById('chat');
+            const newLog = document.createElement('div');
+            newLog.innerText = text;
+            chat.appendChild(newLog);
+            if(chat.children.length > 6) chat.removeChild(chat.children[0]);
         }
 
-        document.getElementById('loading').style.display = 'none';
-        camera.position.set(0, 5, 8);
+        // Balaca Şəhər Binaları (Qabağımızda yaranır)
+        const binaMateriallari = [0x7f8c8d, 0x95a5a6, 0x34495e, 0xd2d7d9];
+        
+        // 5 dənə bina tikirik
+        for (let b = 0; b < 5; b++) {
+            let bHundur = Math.floor(Math.random() * 4) + 3; // 3-6 blok hündürlükdə binalar
+            let bX = (b * 4) - 8;
+            let bZ = -6; // Oyunçunun qabağında
 
-        // Oyunçu hərəkətləri və siçan kilidlənməsi
+            for (let h = 0; h < bHundur; h++) {
+                for (let w = 0; w < 3; w++) {
+                    for (let d = 0; d < 3; d++) {
+                        // Binaların içini boş qoyuruq, sadəcə divarlar
+                        if (w === 0 || w === 2 || d === 0 || d === 2 || h === bHundur - 1) {
+                            let mat = new THREE.MeshLambertMaterial({ color: binaMateriallari[b % binaMateriallari.length] });
+                            let blockMesh = new THREE.Mesh(geometry, mat);
+                            blockMesh.position.set(bX + w, h + 0.5, bZ + d);
+                            scene.add(blockMesh);
+                            objects.push(blockMesh);
+                        }
+                    }
+                }
+            }
+
+            // Hər binanın önünə bir dənə Sandıq (Chest) qoyuruq (Qəhvəyi rəngdə)
+            let chestMat = new THREE.MeshLambertMaterial({ color: 0x8a5a36 }); // Qəhvəyi
+            let chest = new THREE.Mesh(geometry, chestMat);
+            chest.position.set(bX + 1, 0.5, bZ + 4);
+            chest.isChest = true;
+            chest.opened = false;
+            // Sandığın içindəki təsadüfi əşyalar
+            const esyalar = ["💎 Almaz Qılınc", "🍏 Qızıl Alma", "🏹 Güclü Yay", "👑 Almaz Zireh", "🥩 Bişmiş Ət"];
+            chest.loot = esyalar[Math.floor(Math.random() * esyalar.length)];
+            
+            scene.add(chest);
+            chests.push(chest);
+            objects.push(chest);
+        }
+
+        // 4. HƏRƏKƏT VƏ SİÇAN AYARLARI
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         let yaw = 0, pitch = 0;
-        
-        document.body.addEventListener('click', () => {
-            document.body.requestPointerLock();
-        });
+
+        document.body.addEventListener('click', () => { document.body.requestPointerLock(); });
 
         document.addEventListener('mousemove', (e) => {
             if (document.pointerLockElement === document.body) {
@@ -84,6 +133,11 @@
             if(e.code === 'KeyS') moveBackward = true;
             if(e.code === 'KeyA') moveLeft = true;
             if(e.code === 'KeyD') moveRight = true;
+            if(e.code === 'Space' && player.canJump) {
+                player.yVelocity = player.jumpForce;
+                player.canJump = false;
+                logToChat("Hoppandın!");
+            }
         });
         document.addEventListener('keyup', (e) => {
             if(e.code === 'KeyW') moveForward = false;
@@ -92,47 +146,50 @@
             if(e.code === 'KeyD') moveRight = false;
         });
 
-        // Blok Qırma və Qoyma Mexanizmi
+        // 5. SANDIQ AÇMA MEXANİZMİ
         const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2(0, 0); // Ekranın mərkəzi
+        const centerMouse = new THREE.Vector2(0, 0);
 
         document.addEventListener('mousedown', (e) => {
             if (document.pointerLockElement !== document.body) return;
             
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(blocks);
+            if (e.button === 0) { // Sol Klik
+                raycaster.setFromCamera(centerMouse, camera);
+                const intersects = raycaster.intersectObjects(chests);
 
-            if (intersects.length > 0 && intersects[0].distance < 6) {
-                const intersect = intersects[0];
-                
-                if (e.button === 0) { // Sol Klik: BLOK QIRMA
-                    scene.remove(intersect.object);
-                    blocks.splice(blocks.indexOf(intersect.object), 1);
-                } 
-                else if (e.button === 2) { // Sağ Klik: BLOK QOYMA
-                    let rastgeleRenk = renkler[Math.floor(Math.random() * renkler.length)];
-                    let mat = new THREE.MeshLambertMaterial({ color: rastgeleRenk });
-                    let newCube = new THREE.Mesh(geometry, mat);
-                    
-                    // Yeni bloku kliklənən üzün tam yanına qoyuruq
-                    newCube.position.copy(intersect.object.position).add(intersect.face.normal);
-                    scene.add(newCube);
-                    blocks.push(newCube);
+                if (intersects.length > 0 && intersects[0].distance < 4) {
+                    const hitChest = intersects[0].object;
+                    if (!hitChest.opened) {
+                        hitChest.opened = true;
+                        hitChest.material.color.setHex(0xd25d1e); // Açılan sandıq narıncı rəngə boyanır
+                        logToChat(`🧰 Sandıq açıldı!`);
+                        logToChat(`🎁 Tapılan əşya: ${hitChest.loot}`);
+                    } else {
+                        logToChat("Bu sandıq artıq boşdur.");
+                    }
                 }
             }
         });
 
-        // Sağ klik menyusunun açılmasını bloklayırıq
-        document.addEventListener('contextmenu', e => e.preventDefault());
-
-        // Oyunun Dövrü (Game Loop)
+        // 6. OYUNUN ƏSAS DÖVRÜ (Game Loop & Qravitasiya)
         const clock = new THREE.Clock();
+
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            const speed = 5 * delta;
 
-            // Kamera istiqamətini hesablama
+            // Qravitasiya Hesablanması (Düşmə mexanizmi)
+            player.yVelocity += player.grec * delta;
+            camera.position.y += player.yVelocity * delta;
+
+            // Yerdə dayanma yoxlanışı (Zəmin səviyyəsi y = 1.8)
+            if (camera.position.y <= player.height) {
+                camera.position.y = player.height;
+                player.yVelocity = 0;
+                player.canJump = true;
+            }
+
+            // Kamera istiqaməti
             const target = new THREE.Vector3(
                 Math.sin(yaw) * Math.cos(pitch),
                 Math.sin(pitch),
@@ -140,9 +197,10 @@
             );
             camera.lookAt(camera.position.clone().add(target));
 
-            // Hərəkət xətləri
+            // WASD Hərəkəti
             const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)).normalize();
             const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0,1,0)).normalize();
+            const speed = player.speed * delta;
 
             if (moveForward) camera.position.addScaledVector(forward, speed);
             if (moveBackward) camera.position.addScaledVector(forward, -speed);
@@ -153,7 +211,6 @@
         }
         animate();
 
-        // Ekran ölçüsü dəyişəndə oyunu uyğunlaşdır
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
