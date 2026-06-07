@@ -2,7 +2,7 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <title>Minecraft Survival - 8 Slot Versiyası</title>
+    <title>Minecraft Survival - Avtomatik İnventar Sistemi</title>
     <style>
         body { margin: 0; padding: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; user-select: none; }
         #canvas-container { width: 100vw; height: 100vh; display: block; }
@@ -25,7 +25,6 @@
         .inv-item .icon { font-size: 26px; display: block; margin-bottom: 4px; }
         .inv-item .count { font-size: 12px; color: #aaa; margin-top: 4px; }
         
-        /* 🛠️ Hotbar 8 slot üçün genişləndirildi */
         #hotbar { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(20, 20, 20, 0.85); padding: 6px; border-radius: 8px; border: 2px solid #555; box-shadow: 0 8px 20px rgba(0,0,0,0.7); pointer-events: none; }
         .slot { width: 52px; height: 52px; margin: 0 3px; border: 3px solid #3a3a3a; background: #222; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; font-size: 9px; font-weight: bold; position: relative; }
         .slot.active { border-color: #f1c40f; background: #333; box-shadow: 0 0 12px #f1c40f; }
@@ -41,7 +40,7 @@
 <body>
 
     <div id="crosshair"></div>
-    <div id="chat"><div>[Sistem] İnventar slot sayı 8-ə qaldırıldı! Uğurlar!</div></div>
+    <div id="chat"><div>[Sistem] Sandıqdan götürülən hər şey birbaşa aşağıdakı inventara düşür!</div></div>
     
     <div id="heart-container"></div>
     <div id="armor-status">🛡️ Zireh: Yoxdur</div>
@@ -54,7 +53,7 @@
     </div>
 
     <div id="chest-screen" class="ui-screen">
-        <h3 class="inv-title">🧰 Sandığın İçi (Götürmək üçün kliklə)</h3>
+        <h3 class="inv-title">🧰 Sandığın İçi (Kliklə və Birbaşa İnventara Düşsün)</h3>
         <div class="inv-grid" id="chest-grid-element"></div>
         <p style="text-align:center; margin-top:15px;"><button onclick="closeChestInventory()" style="background:#27ae60; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">Çıx (E)</button></p>
     </div>
@@ -71,7 +70,7 @@
     </div>
 
     <div id="instructions">
-        <strong>WASD</strong>: Hərəkət | <strong>SPACE</strong>: Tullanmaq | <strong>E</strong>: Çanta / Sandıq Aç | <strong>1-8</strong>: Slot seçimi | <strong>Sol Klik</strong>: Atəş/Qır
+        <strong>WASD</strong>: Hərəkət | <strong>SPACE</strong>: Tullanmaq | <strong>E</strong>: Sandıq Aç | <strong>1-8</strong>: Slot seçimi | <strong>Sol Klik</strong>: Atəş/Qır
     </div>
 
     <div id="canvas-container"></div>
@@ -86,77 +85,46 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.85);
-        sunLight.position.set(20, 50, 10);
-        scene.add(sunLight);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.85); sunLight.position.set(20, 50, 10); scene.add(sunLight);
 
         let player = {
             height: 1.8, speed: 6, yVelocity: 0, gravity: -14.0, jumpForce: 5.8, canJump: true,
             position: new THREE.Vector3(0, 0, 12),
             inventory: { sword: 0, apple: 0, armor: 0, pistol: 0, ammo: 0, gold: 0, bread: 0 },
-            isArmorEquipped: false,
-            maxHealth: 8, health: 8,
-            hasSwordInHand: false,
-            hasPistolInHand: false,
-            radius: 0.22
+            isArmorEquipped: false, maxHealth: 8, health: 8,
+            hasSwordInHand: false, hasPistolInHand: false, radius: 0.22
         };
 
-        let cameraMode = 0; 
-        let mobDamageCooldown = 0; 
-        let openChestRef = null;
+        let mobDamageCooldown = 0; let openChestRef = null;
 
         function updateHeartsUI() {
-            const container = document.getElementById('heart-container');
-            container.innerHTML = '';
-            let fullHearts = Math.floor(player.health);
-            let hasHalf = (player.health % 1 !== 0);
+            const container = document.getElementById('heart-container'); container.innerHTML = '';
+            let fullHearts = Math.floor(player.health); let hasHalf = (player.health % 1 !== 0);
             for(let i=0; i<player.maxHealth; i++) {
                 let span = document.createElement('span'); span.className = 'heart';
-                if(i < fullHearts) span.innerText = '❤️';
-                else if(i === fullHearts && hasHalf) span.innerText = '💔';
-                else span.innerText = '🖤';
+                if(i < fullHearts) span.innerText = '❤️'; else if(i === fullHearts && hasHalf) span.innerText = '💔'; else span.innerText = '🖤';
                 container.appendChild(span);
             }
         }
         updateHeartsUI();
 
         const playerGroup = new THREE.Group();
-        const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.25), new THREE.MeshLambertMaterial({ color: 0x3498db }));
-        bodyMesh.position.y = 0.6; playerGroup.add(bodyMesh);
-        const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshLambertMaterial({ color: 0xffdbac }));
-        headMesh.position.y = 1.4; playerGroup.add(headMesh);
-        
-        const tpSword = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), new THREE.MeshLambertMaterial({ color: 0x00ffff }));
-        tpSword.position.set(0.4, 0.6, -0.3); tpSword.rotation.x = Math.PI / 4;
-        tpSword.visible = false; playerGroup.add(tpSword);
+        const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.25), new THREE.MeshLambertMaterial({ color: 0x3498db })); bodyMesh.position.y = 0.6; playerGroup.add(bodyMesh);
+        const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.35), new THREE.MeshLambertMaterial({ color: 0xffdbac })); headMesh.position.y = 1.4; playerGroup.add(headMesh);
         scene.add(playerGroup);
 
         const fpPistolGroup = new THREE.Group();
-        const pistolMain = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.3), new THREE.MeshLambertMaterial({ color: 0x333333 }));
-        pistolMain.position.set(0.25, -0.25, -0.4);
-        const pistolGrip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, 0.06), new THREE.MeshLambertMaterial({ color: 0x5a3d28 }));
-        pistolGrip.position.set(0.25, -0.35, -0.3);
-        fpPistolGroup.add(pistolMain, pistolGrip); camera.add(fpPistolGroup); scene.add(camera);
-        fpPistolGroup.visible = false;
+        const pistolMain = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.3), new THREE.MeshLambertMaterial({ color: 0x333333 })); pistolMain.position.set(0.25, -0.25, -0.4);
+        const pistolGrip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, 0.06), new THREE.MeshLambertMaterial({ color: 0x5a3d28 })); pistolGrip.position.set(0.25, -0.35, -0.3);
+        fpPistolGroup.add(pistolMain, pistolGrip); camera.add(fpPistolGroup); scene.add(camera); fpPistolGroup.visible = false;
 
-        const fpSwordGroup = new THREE.Group();
-        const fpSwordMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.08), new THREE.MeshLambertMaterial({ color: 0x00ffff }));
-        fpSwordMesh.position.set(0.3, -0.3, -0.5); fpSwordMesh.rotation.set(Math.PI / 3, 0, -Math.PI / 6);
-        fpSwordGroup.add(fpSwordMesh); camera.add(fpSwordGroup); fpSwordGroup.visible = false;
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x476b26 })); ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshLambertMaterial({ color: 0x476b26 }));
-        ground.rotation.x = -Math.PI / 2; scene.add(ground);
-
-        const collidableObjects = [];
-        const chests = [];
-        const mobs = []; 
-        let activeBlockType = 1;
+        const collidableObjects = []; const chests = []; const mobs = []; let activeBlockType = 1;
 
         function logToChat(text) {
-            const chat = document.getElementById('chat');
-            const div = document.createElement('div'); div.innerText = text; chat.appendChild(div);
+            const chat = document.getElementById('chat'); const div = document.createElement('div'); div.innerText = text; chat.appendChild(div);
             if(chat.children.length > 5) chat.removeChild(chat.children[0]);
         }
 
@@ -167,28 +135,23 @@
                     for(let z=0; z<5; z++) {
                         if((x===0 || x===4 || z===0 || z===4) || y===3) {
                             if(z === 4 && x === 2 && (y === 0 || y === 1)) continue; 
-                            let b = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: y===3 ? 0x5a3d28 : color }));
-                            b.position.set(xPos + x, y + 0.5, zPos + z); scene.add(b); collidableObjects.push(b);
+                            let b = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: y===3 ? 0x5a3d28 : color })); b.position.set(xPos + x, y + 0.5, zPos + z); scene.add(b); collidableObjects.push(b);
                         }
                     }
                 }
             }
-            let chest = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0xd35400 }));
-            chest.position.set(xPos + 2, 0.5, zPos + 2); chest.isChest = true; chest.items = { ...chestItems }; 
+            let chest = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0xd35400 })); chest.position.set(xPos + 2, 0.5, zPos + 2); chest.isChest = true; chest.items = { ...chestItems }; 
             scene.add(chest); chests.push(chest); collidableObjects.push(chest);
         }
         
-        evYarat(-6, -6, 0x7f8c8d, { pistol: 1, ammo: 25, bread: 3 });
-        evYarat(4, -8, 0xd2b48c, { ammo: 15, apple: 2, armor: 1 });
+        evYarat(-6, -6, 0x7f8c8d, { pistol: 1, ammo: 30, bread: 3 });
+        evYarat(4, -8, 0xd2b48c, { ammo: 20, apple: 2, armor: 1 });
 
         function zombieYarat(x, z) {
             const zombieGroup = new THREE.Group();
-            const zBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.2, 0.35), new THREE.MeshLambertMaterial({ color: 0x27ae60 }));
-            zBody.position.y = 0.6; zombieGroup.add(zBody);
-            const zHead = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshLambertMaterial({ color: 0x1e824c }));
-            zHead.position.y = 1.4; zombieGroup.add(zHead);
-            zombieGroup.position.set(x, 0, z); zombieGroup.isAlive = true; zombieGroup.health = 3; 
-            zombieGroup.radius = 0.3;
+            const zBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.2, 0.35), new THREE.MeshLambertMaterial({ color: 0x27ae60 })); zBody.position.y = 0.6; zombieGroup.add(zBody);
+            const zHead = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), new THREE.MeshLambertMaterial({ color: 0x1e824c })); zHead.position.y = 1.4; zombieGroup.add(zHead);
+            zombieGroup.position.set(x, 0, z); zombieGroup.isAlive = true; zombieGroup.health = 3; zombieGroup.radius = 0.3;
             scene.add(zombieGroup); mobs.push(zombieGroup);
         }
         zombieYarat(-2, -15); zombieYarat(6, -16); zombieYarat(0, -5);
@@ -227,7 +190,7 @@
             if(!openChestRef) return;
             const itemsData = [
                 { id: 'pistol', name: 'Tapança', icon: '🔫' }, { id: 'ammo', name: 'Güllə', icon: '⚡' },
-                { id: 'bread', name: 'Çörək', icon: '🍞' }, { id: 'apple', name: 'Alma', icon: '🍎' }, { id: 'armor', name: 'Zireh', icon: '👕' }
+                { id: 'bread', name: 'Təzə Çörək', icon: '🍞' }, { id: 'apple', name: 'Alma', icon: '🍎' }, { id: 'armor', name: 'Zireh', icon: '👕' }
             ];
             let empty = true;
             itemsData.forEach(item => {
@@ -242,58 +205,38 @@
             if(empty) grid.innerHTML = '<p style="grid-column:1/4; text-align:center; color:#ff8888;">Sandıq boşdur!</p>';
         }
 
+        // 🔥 SANDIQDAN GÖTÜRƏNDƏ BİRBAŞA HOTBAR-A DÜŞMƏ MEXANİZMİ
         function chestItemGotur(itemId) {
             if(openChestRef && openChestRef.items[itemId] > 0) {
                 openChestRef.items[itemId]--;
                 player.inventory[itemId] = (player.inventory[itemId] || 0) + 1;
                 logToChat(`📥 Əşya götürüldü: ${itemId.toUpperCase()}`);
+
+                // Əgər tapança götürülübsə, dərhal 5-ci slotu aktivləşdir
+                if(itemId === 'pistol') {
+                    player.hasPistolInHand = true;
+                    document.getElementById('slot-5').innerHTML = '<span class="key-num">5</span><span class="icon">🔫</span><span>Silah</span>';
+                    slotSec(5);
+                }
+                // Əgər güllə götürülübsə və tapança əlimizdədirsə ekrandakı güllə sayını yenilə
+                if(itemId === 'ammo' && player.hasPistolInHand) {
+                    document.getElementById('ammo-display').innerText = `🔫 Güllə: ${player.inventory.ammo}`;
+                }
+                // Əgər yemək və ya zireh götürülübsə digər slotlara da yaza bilərik
+                if(itemId === 'bread') {
+                    document.getElementById('slot-6').innerHTML = '<span class="key-num">6</span><span class="icon">🍞</span><span>Çörək</span>';
+                }
+                if(itemId === 'armor') {
+                    document.getElementById('slot-7').innerHTML = '<span class="key-num">7</span><span class="icon">👕</span><span>Zireh</span>';
+                }
+
                 yenileChestUI();
             }
         }
 
         function yenileInventoryUI() {
             const grid = document.getElementById('inv-grid-element'); grid.innerHTML = '';
-            const items = [
-                { id: 'pistol', name: 'Tapança', icon: '🔫', count: player.inventory.pistol },
-                { id: 'ammo', name: 'Güllə', icon: '⚡', count: player.inventory.ammo },
-                { id: 'bread', name: 'Çörək', icon: '🍞', count: player.inventory.bread },
-                { id: 'sword', name: 'Almaz Qılınc', icon: '⚔️', count: player.inventory.sword },
-                { id: 'apple', name: 'Sehrli Alma', icon: '🍎', count: player.inventory.apple },
-                { id: 'armor', name: 'Almaz Zireh', icon: '👕', count: player.inventory.armor }
-            ];
-            items.forEach(item => {
-                if(item.count > 0) {
-                    let div = document.createElement('div'); div.className = 'inv-item';
-                    div.innerHTML = `<span class="icon">${item.icon}</span><b>${item.name}</b><div class="count">Səndə: ${item.count}</div>`;
-                    div.onclick = () => itemIstifadeEt(item.id); grid.appendChild(div);
-                }
-            });
-            if(grid.innerHTML === '') grid.innerHTML = '<p style="grid-column:1/4; text-align:center; color:#888;">Çantanız boşdur.</p>';
-        }
-
-        function itemIstifadeEt(itemId) {
-            if(itemId === 'apple' || itemId === 'bread') {
-                if(player.health < player.maxHealth) {
-                    player.inventory[itemId]--; player.health = Math.min(player.maxHealth, player.health + 2);
-                    updateHeartsUI(); logToChat(`🍞 Yemək yeyildi! Can doldu.`);
-                }
-            } 
-            else if(itemId === 'armor') {
-                player.inventory.armor--; player.isArmorEquipped = true;
-                bodyMesh.material.color.setHex(0x00ffff);
-                document.getElementById('armor-status').innerText = "🛡️ Zireh: Almaz Köynək (Aktiv)";
-            }
-            else if(itemId === 'sword') {
-                player.hasSwordInHand = true; player.hasPistolInHand = false;
-                document.getElementById('slot-4').innerHTML = '<span class="key-num">4</span><span class="icon">⚔️</span><span>Qılınc</span>';
-                slotSec(4);
-            }
-            else if(itemId === 'pistol') {
-                player.hasPistolInHand = true; player.hasSwordInHand = false;
-                document.getElementById('slot-5').innerHTML = '<span class="key-num">5</span><span class="icon">🔫</span><span>Silah</span>';
-                slotSec(5);
-            }
-            yenileInventoryUI(); toggleInventory();
+            // Çanta menyusu sadəcə baxış üçündür
         }
 
         function slotSec(num) {
@@ -301,14 +244,31 @@
             document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
             document.getElementById(`slot-${num}`).classList.add('active');
             
-            if(num === 4 && player.hasSwordInHand) { fpSwordGroup.visible = true; fpPistolGroup.visible = false; }
-            else if(num === 5 && player.hasPistolInHand) { 
-                fpSwordGroup.visible = false; fpPistolGroup.visible = true;
+            if(num === 5 && player.hasPistolInHand) { 
+                fpPistolGroup.visible = true;
                 document.getElementById('ammo-display').style.display = 'block';
                 document.getElementById('ammo-display').innerText = `🔫 Güllə: ${player.inventory.ammo}`;
             } else {
-                fpSwordGroup.visible = false; fpPistolGroup.visible = false;
+                fpPistolGroup.visible = false;
                 document.getElementById('ammo-display').style.display = 'none';
+            }
+
+            // Slot 6-da çörək varsa və seçilərsə can doldursun
+            if(num === 6 && player.inventory.bread > 0) {
+                if(player.health < player.maxHealth) {
+                    player.inventory.bread--;
+                    player.health = Math.min(player.maxHealth, player.health + 2);
+                    updateHeartsUI(); logToChat("🍞 Çörək yeyildi! +2 Can.");
+                    if(player.inventory.bread <= 0) document.getElementById('slot-6').innerHTML = '<span class="key-num">6</span><span class="icon">➖</span><span>Boş</span>';
+                }
+            }
+            // Slot 7-də zireh varsa və seçilərsə geyinsin
+            if(num === 7 && player.inventory.armor > 0) {
+                player.inventory.armor--; player.isArmorEquipped = true;
+                bodyMesh.material.color.setHex(0x00ffff);
+                document.getElementById('armor-status').innerText = "🛡️ Zireh: Almaz Köynək (Aktiv)";
+                logToChat("👕 Zireh geyinildi!");
+                document.getElementById('slot-7').innerHTML = '<span class="key-num">7</span><span class="icon">➖</span><span>Boş</span>';
             }
         }
 
@@ -321,14 +281,12 @@
                 raycaster.setFromCamera(screenCenter, camera);
                 const chestIntersects = raycaster.intersectObjects(chests);
                 if (chestIntersects.length > 0 && chestIntersects[0].distance < 4.0) { openChestInventory(chestIntersects[0].object); return; }
-                toggleInventory(); 
             }
             if(isInventoryOpen || isChestOpen) return;
             if(e.code === 'KeyW') moveForward = true; if(e.code === 'KeyS') moveBackward = true;
             if(e.code === 'KeyA') moveLeft = true; if(e.code === 'KeyD') moveRight = true;
             if(e.code === 'Space' && player.canJump) { player.yVelocity = player.jumpForce; player.canJump = false; }
             
-            // 🛠️ 1-dən 8-ə qədər düymə seçimləri aktiv edildi
             if(e.key >= '1' && e.key <= '8') {
                 if(e.key === '5' && !player.hasPistolInHand) return;
                 slotSec(parseInt(e.key));
@@ -362,8 +320,7 @@
                 const zombiVuruldumu = raycaster.intersectObjects(mobs.filter(m => m.isAlive), true);
                 if(zombiVuruldumu.length > 0 && zombiVuruldumu[0].distance < 4.0) {
                     let hitZombie = zombiVuruldumu[0].object.parent || zombiVuruldumu[0].object;
-                    let damage = (activeBlockType === 4 && player.hasSwordInHand) ? 1.5 : 0.5;
-                    hitZombie.health -= damage;
+                    hitZombie.health -= 0.5;
                     if(hitZombie.health <= 0) { hitZombie.isAlive = false; scene.remove(hitZombie); }
                     return; 
                 }
@@ -376,9 +333,8 @@
             } 
             else if (e.button === 2) {
                 const intersects = raycaster.intersectObjects(collidableObjects);
-                // Blokları ancaq tikinti slotları (1, 2, 3) və ya boş slotlar seçiləndə qoymaq olar
-                if (intersects.length > 0 && intersects[0].distance < 5 && (activeBlockType <= 3 || activeBlockType >= 6)) {
-                    let type = activeBlockType > 3 ? 1 : activeBlockType; // Boş slotdadırsa default olaraq daş qoysun
+                if (intersects.length > 0 && intersects[0].distance < 5 && (activeBlockType <= 3 || activeBlockType >= 8)) {
+                    let type = activeBlockType > 3 ? 1 : activeBlockType;
                     let colors = { 1: 0x7f8c8d, 2: 0x8a5a36, 3: 0xd35400 };
                     let newB = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshLambertMaterial({ color: colors[type] }));
                     newB.position.copy(intersects[0].object.position).add(intersects[0].face.normal);
